@@ -1,0 +1,563 @@
+@import url('https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap');
+
+body {
+  font-family: 'Roboto', sans-serif;
+  text-align: center;
+  background-color: #2c3e50;
+  color: #ecf0f1;
+  margin: 0;
+  padding: 0;
+}
+
+.background {
+  background-image: url('images/ImagenDeFondo.jpg.png');
+  background-size: cover;
+  background-position: center;
+}
+
+.hidden {
+  display: none;
+}
+
+#start-screen, #game-screen, #end-screen {
+  padding: 20px;
+  max-width: 600px;
+  margin: auto;
+  background-color: rgba(52, 73, 94, 0.8);
+  border-radius: 10px;
+  box-shadow: 0 0 15px rgba(0, 0, 0, 0.2);
+}
+
+#avatars {
+  display: flex;
+  justify-content: space-around;
+  margin-bottom: 20px;
+}
+
+.avatar {
+  width: 100px;
+  height: 100px;
+  border-radius: 50%;
+  border: 2px solid #ecf0f1;
+}
+
+h1, h2 {
+  color: #e74c3c;
+}
+
+label, select, input {
+  display: block;
+  margin: 10px auto;
+  font-size: 16px;
+}
+
+input, select {
+  padding: 10px;
+  border: none;
+  border-radius: 5px;
+  background-color: #ecf0f1;
+  color: #2c3e50;
+}
+
+button {
+  margin: 10px;
+  padding: 10px 20px;
+  font-size: 16px;
+  cursor: pointer;
+  background-color: #e74c3c;
+  border: none;
+  border-radius: 5px;
+  color: white;
+  transition: background-color 0.3s ease, transform 0.1s ease;
+}
+
+button:hover {
+  background-color: #c0392b;
+}
+
+button:active {
+  transform: scale(0.98);
+}
+
+button:disabled {
+  background-color: #555;
+  cursor: not-allowed;
+}
+
+.health-bar {
+  width: 80%;
+  height: 20px;
+  background-color: #333;
+  border-radius: 10px;
+  overflow: hidden;
+  margin: 10px auto;
+  position: relative;
+}
+
+.health-fill {
+  height: 100%;
+  background-color: #e74c3c;
+  transition: width 0.3s ease-in-out;
+}
+
+#monsterHealthFill {
+  background-color: #3498db;
+}
+
+#message {
+  margin: 20px 0;
+  font-size: 18px;
+  font-weight: bold;
+  min-height: 50px;
+}
+
+.attack-animation {
+  animation: attack 0.5s forwards;
+}
+
+@keyframes attack {
+  0% { transform: translateX(0); }
+  50% { transform: translateX(10px); }
+  100% { transform: translateX(0); }
+}
+
+.block-animation {
+  animation: block 0.5s forwards;
+}
+
+@keyframes block {
+  0% { transform: rotate(0); }
+  50% { transform: rotate(20deg); }
+  100% { transform: rotate(0); }
+}
+
+.weapon-change {
+  animation: changeWeapon 0.5s forwards;
+}
+
+@keyframes changeWeapon {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.2); }
+  100% { transform: scale(1); }
+}
+
+/* Nuevo estilo para el cuadro de estadísticas del jugador */
+.player-stats {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  background-color: rgba(52, 73, 94, 0.8);
+  border-radius: 10px;
+  padding: 10px;
+  width: 200px;
+  box-shadow: 0 0 15px rgba(0, 0, 0, 0.2);
+  text-align: left;
+}
+
+.player-stats h3 {
+  color: #e74c3c;
+  margin-top: 0;
+}
+
+.selected {
+  background-color: #16a085;
+  color: white;
+}
+
+/* Estilos para Brazaletes y Pociones */
+.bracelet {
+  display: flex;
+  justify-content: center;
+  margin-top: 10px;
+}
+
+.bracelet button {
+  background-color: #e67e22;
+}
+
+.bracelet button:hover {
+  background-color: #d35400;
+}
+
+.potion {
+  display: flex;
+  justify-content: center;
+  margin-top: 10px;
+}
+
+.potion button {
+  background-color: #8e44ad;
+}
+
+.potion button:hover {
+  background-color: #6c3483;
+}
+#intro-screen {
+  padding: 20px;
+  max-width: 600px;
+  margin: auto;
+  background-color: rgba(52, 73, 94, 0.8);
+  border-radius: 10px;
+  box-shadow: 0 0 15px rgba(0, 0, 0, 0.2);
+}
+
+#intro-screen h1, #intro-screen p, #intro-screen ul {
+  text-align: left;
+}
+
+#intro-screen button {
+  margin-top: 20px;
+  padding: 10px 20px;
+  font-size: 16px;
+  cursor: pointer;
+  background-color: #e74c3c;
+  border: none;
+  border-radius: 5px;
+  color: white;
+  transition: background-color 0.3s ease, transform 0.1s ease;
+}
+
+#intro-screen button:hover {
+  background-color: #c0392b;
+}
+
+#intro-screen button:active {
+  transform: scale(0.98);
+}
+.underline
+{
+  -webkit-text-stroke-width: 0.15px;
+  -webkit-text-stroke-color: #333;
+  color: #e74c3c;
+  
+}
+@media (max-width: 1135px) {
+  .player-stats {
+    position: static;
+    margin-top: 20px;
+    width: 100%;
+  }
+}
+#potionMenu {
+  display: inline-flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+  background-color: rgba(52, 73, 94, 0.95);
+  border: 1px solid #8e44ad;
+  border-radius: 8px;
+  padding: 12px;
+  margin-top: 8px;
+}
+
+#potionMenu p {
+  width: 100%;
+  margin: 0 0 8px 0;
+  color: #ecf0f1;
+}
+
+#potionMenu button {
+  margin: 0;
+  background-color: #8e44ad;
+}
+
+#potionMenu button:hover {
+  background-color: #6c3483;
+}
+/* Botones de ayuda */
+#helpButtons {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  z-index: 100;
+}
+
+.help-btn {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background-color: #e67e22;
+  font-size: 14px;
+  font-weight: bold;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 3px 10px rgba(0,0,0,0.4);
+}
+
+.help-btn:hover {
+  background-color: #d35400;
+}
+
+/* Modal */
+.modal {
+  position: fixed;
+  inset: 0;
+  background-color: rgba(0,0,0,0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 200;
+}
+
+.modal.hidden {
+  display: none;
+}
+
+.modal-content {
+  background-color: #2c3e50;
+  border: 1px solid #e74c3c;
+  border-radius: 12px;
+  padding: 24px;
+  max-width: 420px;
+  width: 90%;
+  max-height: 80vh;
+  overflow-y: auto;
+  position: relative;
+  text-align: left;
+  box-shadow: 0 0 30px rgba(231, 76, 60, 0.3);
+}
+
+.modal-content h3 {
+  color: #e74c3c;
+  margin-top: 0;
+}
+
+.modal-content h4 {
+  color: #e67e22;
+  margin-bottom: 4px;
+}
+
+.modal-content p {
+  margin-top: 0;
+  font-size: 14px;
+  color: #ecf0f1;
+}
+
+.modal-content hr {
+  border-color: #444;
+  margin: 16px 0;
+}
+
+.modal-close {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  background: transparent;
+  color: #ecf0f1;
+  font-size: 18px;
+  padding: 4px 8px;
+  margin: 0;
+  border: none;
+}
+
+.modal-close:hover {
+  background: rgba(255,255,255,0.1);
+  border-radius: 4px;
+}
+/* Números flotantes de daño */
+.floating-number {
+  position: absolute;
+  font-size: 22px;
+  font-weight: bold;
+  pointer-events: none;
+  animation: floatUp 1.2s ease-out forwards;
+  z-index: 999;
+  text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
+}
+
+@keyframes floatUp {
+  0%   { opacity: 1; transform: translateY(0) scale(1); }
+  30%  { transform: translateY(-20px) scale(1.3); }
+  100% { opacity: 0; transform: translateY(-60px) scale(0.8); }
+}
+/* Botón de mapa */
+#mapToggleBtn {
+  position: fixed;
+  left: 16px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  background-color: #16a085;
+  font-size: 22px;
+  padding: 0;
+  margin: 0;
+  z-index: 100;
+  box-shadow: 0 3px 12px rgba(0,0,0,0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+#mapToggleBtn:hover {
+  background-color: #1abc9c;
+}
+
+/* Panel del mapa */
+#dungeonMap {
+  position: fixed;
+  left: 80px;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 150;
+  background-color: rgba(20, 30, 40, 0.97);
+  border: 2px solid #16a085;
+  border-radius: 16px;
+  padding: 20px;
+  width: 220px;
+  box-shadow: 0 0 30px rgba(0,0,0,0.6);
+}
+
+#dungeonMap h3 {
+  color: #16a085;
+  margin: 0 0 16px 0;
+  font-size: 15px;
+  text-align: center;
+}
+
+#mapNodes {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0;
+}
+
+.map-node {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  position: relative;
+}
+
+.map-node-circle {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  font-weight: bold;
+  flex-shrink: 0;
+  border: 2px solid #444;
+  background-color: #2c3e50;
+  color: #777;
+  transition: all 0.3s ease;
+}
+
+.map-node-circle.defeated {
+  background-color: #1a5c3a;
+  border-color: #2ecc71;
+  color: #2ecc71;
+}
+
+.map-node-circle.current {
+  background-color: #7d3c00;
+  border-color: #e67e22;
+  color: #e67e22;
+  box-shadow: 0 0 12px rgba(230, 126, 34, 0.7);
+  animation: pulseCurrent 1.5s infinite alternate;
+}
+
+.map-node-circle.boss {
+  width: 46px;
+  height: 46px;
+  font-size: 20px;
+  background-color: #2c0000;
+  border-color: #e74c3c;
+  color: #e74c3c;
+}
+
+.map-node-circle.boss.current {
+  box-shadow: 0 0 16px rgba(231, 76, 60, 0.8);
+  border-color: #e74c3c;
+}
+
+.map-node-circle.boss.defeated {
+  background-color: #4a0000;
+  border-color: #e74c3c;
+  color: #e74c3c;
+}
+
+@keyframes pulseCurrent {
+  0%   { transform: scale(1);    box-shadow: 0 0 8px rgba(230,126,34,0.6); }
+  100% { transform: scale(1.1);  box-shadow: 0 0 18px rgba(230,126,34,0.9); }
+}
+
+.map-node-label {
+  font-size: 12px;
+  color: #bdc3c7;
+  text-align: left;
+  line-height: 1.3;
+}
+
+.map-node-label.defeated {
+  color: #2ecc71;
+}
+
+.map-node-label.current {
+  color: #e67e22;
+  font-weight: bold;
+}
+
+.map-node-label.boss {
+  color: #e74c3c;
+  font-weight: bold;
+}
+
+/* Línea conectora entre nodos */
+.map-connector {
+  width: 2px;
+  height: 18px;
+  margin-left: 18px;
+  background: linear-gradient(to bottom, #444, #333);
+  transition: background 0.3s;
+}
+
+.map-connector.defeated {
+  background: linear-gradient(to bottom, #2ecc71, #1a5c3a);
+}
+/* Mercader */
+.merchant-deal {
+    background-color: rgba(230, 126, 34, 0.1);
+    border: 1px solid #e67e22;
+    border-radius: 8px;
+    padding: 12px;
+    margin: 8px 0;
+    text-align: left;
+}
+
+.merchant-deal h4 {
+    color: #e67e22;
+    margin: 0 0 8px 0;
+}
+
+.merchant-deal p {
+    font-size: 13px;
+    margin: 4px 0;
+}
+
+#hybridSkillMenu {
+    display: inline-flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 8px;
+    background-color: rgba(142, 68, 173, 0.2);
+    border: 1px solid #8e44ad;
+    border-radius: 8px;
+    padding: 12px;
+    margin-top: 8px;
+}
+
+#hybridSkillMenu p {
+    width: 100%;
+    margin: 0 0 8px 0;
+}

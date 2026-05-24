@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Juego por Roles</title>
+    <link rel="stylesheet" href="juego2.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+</head>
+<body class="background">
+    <!-- Audio elements for sound effects -->
+    <audio id="blockSound" src="sounds/shield-guard-6963.mp3" preload="auto"></audio>
+    <audio id="shieldBreakSound" src="sounds/small-rock-break-194553.mp3" preload="auto"></audio>
+
+    <!-- Pantalla de inicio -->
+    <div id="intro-screen">
+        <h1>Bienvenido a Mazmorras</h1>
+        <p>Este es un juego de rol donde te enfrentarás a diversos monstruos y jefes finales. Debes elegir una clase, luchar con monstruos, usar habilidades y estrategias para ganar. Aquí están algunas de las funciones:</p>
+        <ul>
+            <li><strong>Guerrero</strong>: Aumenta su daño y reduce el daño recibido.</li>
+            <li><strong>Mago</strong>: Recupera vida y mejora sus habilidades defensivas.</li>
+            <li><strong>Explorador</strong>: Repara su escudo y tiene la posibilidad de mejorar su espada.</li>
+            <li><strong>Pociones</strong>:<br> <span class="underline">Curación</span>: recupera 20 puntos de vida.<br> <span class="underline">Fortaleza</span> : aumenta el ataque un 15%
+                <br> <span class="underline">Protección</span> : aumenta aumenta probabilidad de bloqueo un 10%<br> <span class="underline">Energía</span> : recarga 2 puntos de Habilidad</li>
+            <li><strong>Brazaletes</strong>:<br> <span class="underline">Fuerza</span> : aumenta atque un 15%.<br> <span class="underline">Defensa</span> : aumenta probabilidad de bloqueo un 10%.<br>
+            <span class="underline">Agilidad</span> : aumenta la probabilidad de esquivar ataques en un 10%.</li> 
+        </ul>
+        <button onclick="goToClassSelection()">Ir a selección de personaje</button>
+    </div>
+
+    <!-- Pantalla de selección de clase -->
+    <div id="start-screen" class="hidden">
+        <h1>Mazmorras</h1>
+        <label for="playerNameInput">Ingresa tu nombre: </label>
+        <input type="text" id="playerNameInput">
+        <br>
+        <label>Elige tu clase:</label>
+        <div id="classButtons">
+            <button onclick="selectClass('Guerrero')"><i class="fa-solid fa-shield"></i> Guerrero</button>
+            <button onclick="selectClass('Mago')"><i class="fa-solid fa-hat-wizard"></i> Mago</button>
+            <button onclick="selectClass('Explorador')"><i class="fa-solid fa-binoculars"></i> Explorador</button>
+        </div>
+        <br><br>
+        <button onclick="startGame()">Comenzar Juego</button>
+    </div>
+
+    <!-- Pantalla de juego -->
+    <div id="game-screen" class="hidden">
+        <h2>Jugador: <span id="playerName"></span> (<span id="playerClass"></span>)</h2>
+        <div id="avatars">
+            <img id="playerAvatar" class="avatar" src="images/avatarDeJugador.jpg.gif" alt="Avatar del Jugador">
+            <img id="monsterAvatar" class="avatar" src="./images/monstruo_comun.jpg" alt="Avatar del Monstruo">          
+        </div>
+        <div id="stats">
+            <div>
+                Vida del Jugador:
+                <div id="playerHealthBar" class="health-bar">
+                    <div id="playerHealthFill" class="health-fill"></div>
+                </div>
+            </div>
+            <div>
+                Vida del Monstruo:
+                <div id="monsterHealthBar" class="health-bar">
+                    <div id="monsterHealthFill" class="health-fill"></div>
+                </div>
+            </div>
+        </div>
+        <div id="weapon-info">Espada actual: <span id="currentWeapon"></span></div>
+        <div id="shield-info">Escudo actual: <span id="currentShield"></span></div>
+        <div id="message"></div>
+        <button id="attackButton" onclick="playerAttack()">Atacar</button>
+        <button id="blockButton" onclick="playerBlock()">Bloquear</button>
+        <button id="skillButton" onclick="useSkill()">Habilidad</button>
+        <button id="changeWeaponButton" class="hidden" onclick="changeWeapon()">Cambiar Conjunto</button>
+        <button id="keepWeaponButton" class="hidden" onclick="keepWeapon()">Mantener Conjunto</button>
+        <button id="usePotionButton" class="hidden" onclick="usePotion()">Usar Poción</button>
+        <button id="ancestralLootButton" class="hidden" onclick="takeAncestralPotion()">Tomar Poción</button>
+        <!-- Cuadro de estadísticas del jugador -->
+        <div id="playerStats" class="player-stats">
+            <h3>Estadísticas del Jugador</h3>
+            <p>Espada: <span id="playerSword"></span></p>
+            <p>Daño de Espada: <span id="playerSwordDamage"></span></p>
+            <p>Escudo: <span id="playerShield"></span></p>
+            <p>Vida del Escudo: <span id="playerShieldHp"></span></p>
+            <p>Probabilidad de Bloqueo: <span id="playerShieldBlock"></span></p>
+            <p>Habilidad Restante: <span id="skillUses"></span></p>
+            <p>Brazalete: <span id="playerBracelet"></span></p>
+            <p>Pociones: <span id="playerPotions"></span></p>
+        </div>
+                <!-- Botones de ayuda -->
+            <div id="helpButtons">
+            <button class="help-btn" onclick="toggleModal('playerInfoModal')">
+            <i class="fa-solid fa-user"></i> ?
+            </button>
+            <button class="help-btn" onclick="toggleModal('monsterInfoModal')">
+            <i class="fa-solid fa-skull"></i> ?
+            </button>
+            </div>
+
+            <!-- Modal: Info del Jugador -->
+            <div id="playerInfoModal" class="modal hidden">
+            <div class="modal-content">
+            <button class="modal-close" onclick="toggleModal('playerInfoModal')">✕</button>
+            <h3>Información del Jugador</h3>
+            <div id="modalPlayerStats"></div>
+            <hr>
+            <h4><i class="fa-solid fa-shield"></i> Guerrero</h4>
+            <p>Habilidad: <strong>Furia de Batalla</strong> — Duplica el daño de ataque y reduce el daño recibido un 50% durante esa ronda.</p>
+            <h4><i class="fa-solid fa-hat-wizard"></i> Mago</h4>
+            <p>Habilidad: <strong>Meditación</strong> — Recupera 15 puntos de vida y aumenta la probabilidad de bloqueo un 5%.</p>
+            <h4><i class="fa-solid fa-binoculars"></i> Explorador</h4>
+            <p>Habilidad: <strong>Ingenio</strong> — Repara el escudo completamente. 50% de chance de mejorar la espada al siguiente nivel.</p>
+            </div>
+            </div>
+
+            <!-- Modal: Info de Monstruos -->
+            <div id="monsterInfoModal" class="modal hidden">
+            <div class="modal-content">
+            <button class="modal-close" onclick="toggleModal('monsterInfoModal')">✕</button>
+            <h3>Tipos de Monstruos</h3>
+            <h4>👾 Monstruo Común</h4>
+            <p>Sin habilidades especiales. Ataca directamente cada turno.</p>
+            <h4>🧙 Monstruo Mago</h4>
+            <p><strong>Regeneración</strong> — 30% de chance de recuperar 7 puntos de vida después de recibir daño.</p>
+            <h4>⚔️ Monstruo Guerrero</h4>
+            <p><strong>Contraataque</strong> — 20% de chance de bloquear tu ataque y devolverte daño en el mismo turno.</p>
+            <h4>🗺️ Monstruo Explorador</h4>
+            <p><strong>Rompe Escudo</strong> — 15% de chance de destruir tu escudo de un golpe.</p>
+            <h4>💀 Jefe Final</h4>
+            <p>100 puntos de vida y ataque elevado. Aparece en el combate 10. Sin habilidad especial, pero es el más resistente.</p>
+            </div>
+         </div>
+    </div>
+    <!-- Botón mapa -->
+    <button id="mapToggleBtn" class="hidden" onclick="toggleMap()">🗺️</button>
+
+    <!-- Panel del mapa -->
+    <div id="dungeonMap" class="hidden">
+        <div id="mapContent">
+            <h3>🗺️ Camino a la Mazmorra</h3>
+            <div id="mapNodes"></div>
+        </div>
+    </div>
+    <!-- Pantalla de fin de juego -->
+    <div id="end-screen" class="hidden">
+        <h2 id="endMessage"></h2>
+        <button id="restartButton" onclick="restartGame()">Reiniciar Juego</button>
+    </div>
+
+    <script src="juego2.js"></script>
+</body>
+</html>
