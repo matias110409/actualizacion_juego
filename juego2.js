@@ -992,7 +992,7 @@ function prepareNextMonsterAfterMerchant() {
 }
 function takeAncestralPotion() {
     if (player.potions.length >= 3) {
-        updateStats("Ya tenés 5 pociones, no podés cargar más.");
+        updateStats("Ya tenés 3 pociones, no podés cargar más.");
         return;
     }
     player.potions.push(currentWeaponDrop.potion);
