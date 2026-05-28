@@ -16,14 +16,15 @@ class Shield {
 
 
     takeDamage(damage) {
-        if (this.isUnbreakable) return false; // Nunca se rompe
-        this.hp -= damage;
-        if (this.hp <= 0) {
-            this.hp = 0;
-            return true;
-        }
-        return false;
+    if (this.isUnbreakable) return false;
+    this.hp -= damage;
+    if (this.hp <= 0) {
+        this.hp = 0;
+        this.broken = true;
+        return true;
     }
+    return false;
+}
   repair() {
       this.hp = shields[this.name.toLowerCase()].hp;
   }
@@ -47,6 +48,7 @@ class Monster {
   constructor(name, hp, attack, avatar, ability) {
       this.name = name;
       this.hp = hp;
+       this.maxHp = hp;
       this.attack = attack;
       this.avatar = avatar;
       this.ability = ability; // Nueva propiedad para habilidades especiales
@@ -197,10 +199,10 @@ let selectedClass = '';
 
 function selectClass(playerClass) {
   selectedClass = playerClass;
-  document.querySelectorAll('#classButtons button').forEach(button => {
-      button.classList.remove('selected');
+  document.querySelectorAll('.class-card').forEach(card => {
+    card.classList.remove('selected');
   });
-  document.querySelector(`button[onclick="selectClass('${playerClass}')"]`).classList.add('selected');
+  document.getElementById(`card-${playerClass}`).classList.add('selected');
 }
 
 // Variables globales
@@ -239,7 +241,7 @@ const specialAbilities = {
     
   mago: (player, monster) => {
       if (Math.random() < 0.3) {
-          monster.hp += 7;
+          monster.hp = Math.min(monster.hp + 7, monster.maxHp);
           document.getElementById("message").innerText += `\n¡${monster.name} ha recuperado 5 puntos de salud!`;
       }
   },
@@ -267,7 +269,7 @@ const specialAbilities = {
             if (roll < 0.33) {
                 // Habilidad de mago: regeneración
                 if (Math.random() < 0.3) {
-                    monster.hp += 7;
+                    monster.hp = Math.min(monster.hp + 7, monster.maxHp);
                     spawnFloatingNumber(7, "heal", "monsterAvatar");
                     document.getElementById("message").innerText += `\n¡El Jefe Final se regenera!`;
                 }
@@ -302,6 +304,7 @@ let hybridClass = null; // "Guerrero" o "Explorador" para el mago híbrido
 
 const merchantSword = new Sword("Espada del Mercader", 3);
 const merchantShield = new Shield("Escudo del Mercader", 0.35, Infinity);
+const merchantBracelet = new Bracelet("Brazalete del Mercader", (player) => {});
 merchantShield.isUnbreakable = true;
 
 // Sobrescribir takeDamage para el escudo del mercader
@@ -354,11 +357,6 @@ function generateMonster(index) {
 }
 function playerAttack() {
     const damage = player.attack();
-
-    if (monster.ability && monster.ability === specialAbilities.guerrero && monster.ability(player, monster)) {
-        updateStats();
-        return;
-    }
 
     monster.hp -= damage;
 
@@ -438,7 +436,11 @@ function playerBlock() {
         }
         spawnFloatingNumber(0, "block", "playerAvatar");
     } else {
-        const damage = Math.floor(Math.random() * monster.attack) + 1;
+        let damage = Math.floor(Math.random() * monster.attack) + 1;
+        if (player.damageReductionActive) {
+            damage = Math.floor(damage * 0.5);
+            player.damageReductionActive = false;
+        }
         player.hp -= damage;
         spawnFloatingNumber(damage, "damage", "playerAvatar");
         player.takeShieldDamage(damage);
@@ -459,7 +461,14 @@ function monsterAttack() {
         spawnFloatingNumber(0, "dodge", "playerAvatar");
         updateStats(`${player.name} esquivó el ataque.`);
     } else {
-        const damage = Math.floor(Math.random() * monster.attack) + 1;
+        let damage = Math.floor(Math.random() * monster.attack) + 1;
+
+        // 👇 reducción de daño del Guerrero
+        if (player.damageReductionActive) {
+            damage = Math.floor(damage * 0.5);
+            player.damageReductionActive = false;
+        }
+
         player.hp -= damage;
         spawnFloatingNumber(damage, "damage", "playerAvatar");
 
@@ -468,10 +477,9 @@ function monsterAttack() {
         }
 
         if (player.hp <= 0) { endGame(false); return; }
-        updateStats(`El ${monster.name} atacó.`);
+        updateStats(`El ${monster.name} atacó causando ${damage} de daño.`);
     }
 }
-
 function changeWeapon() {
     player.sword = currentWeaponDrop.sword;
     player.shield = new Shield(currentWeaponDrop.shield.name, currentWeaponDrop.shield.blockChance, currentWeaponDrop.shield.hp);
@@ -526,7 +534,7 @@ function updateEquipment() {
 
 function updateStats(message = "") {
   const playerHealthPercent = Math.max((player.hp / 50) * 100, 0);
-  const monsterHealthPercent = Math.max((monster.hp / 100) * 100, 0);
+  const monsterHealthPercent = Math.max((monster.hp / monster.maxHp) * 100, 0);
   document.getElementById("playerHealthFill").style.width = `${playerHealthPercent}%`;
   document.getElementById("monsterHealthFill").style.width = `${monsterHealthPercent}%`;
 
@@ -566,17 +574,14 @@ function restartGame() {
     merchantAppeared = false;
     hasAncestralPact = false;
     hybridClass = null;
-    player.shield = new Shield("Madera", 0.1, 10);
-    player.curseName = null;
+    player = null; // 👈 forzar nuevo jugador en startGame
+
     document.getElementById("blockButton").disabled = false;
-    player.skillUses = 3;
-    player.skillActive = false;
     document.getElementById("monsterAvatar").src = "./images/monstruo_comun.jpg";
     document.getElementById("end-screen").classList.add("hidden");
     document.getElementById("start-screen").classList.remove("hidden");
     document.getElementById("mapToggleBtn").classList.add("hidden");
     document.getElementById("dungeonMap").classList.add("hidden");
-    updatePlayerStats();
 }
 function getRandomSword() {
   const keys = Object.keys(swords);
@@ -656,14 +661,16 @@ function usePotion() {
   }
 }
 function goToClassSelection() {
+  stopLeaves();
   document.getElementById("intro-screen").classList.add("hidden");
   document.getElementById("start-screen").classList.remove("hidden");
 }
 
-// Asegúrate de que la pantalla de selección de clase esté oculta al inicio
+// Asegurar de que la pantalla de selección de clase esté oculta al inicio
 document.addEventListener("DOMContentLoaded", function() {
   document.getElementById("intro-screen").classList.remove("hidden");
   document.getElementById("start-screen").classList.add("hidden");
+  startLeaves();
 });
 
 function toggleModal(id) {
@@ -691,7 +698,7 @@ function toggleModal(id) {
 }
 function updateSkillButton() {
     if (player.playerClass === "Mago" && hybridClass) {
-        document.getElementById("skillButton").innerText = `✨ Habilidad Dual`;
+        document.getElementById("skillButton").innerText = ` Habilidad Dual`;
         return;
     }
     const skillNames = {
@@ -785,60 +792,59 @@ function updateMapNodes() {
   }
 }
 function showMerchant() {
-    merchantAppeared = true;
-    const randomCurse = getRandomCurse();
+  merchantAppeared = true;
+  const randomCurse = getRandomCurse();
+  const isMage = player.playerClass === "Mago";
+  const canAfford = player.hp > 15;
+  const ancestralCurse = getRandomCurse();
 
+  showMerchantWithEffects(() => {
     const modal = document.createElement("div");
     modal.id = "merchantModal";
     modal.classList.add("modal");
 
-    const isMage = player.playerClass === "Mago";
-
-    // Opciones del trato común
-    const canAfford = player.hp > 15;
     const commonDealHTML = `
-        <div class="merchant-deal">
-            <h4>⚔️ Trato del Mercader</h4>
-            <p>Espada de Obsidiana + Escudo de Diamante<br><strong>O</strong><br>Espada de Diamante + Escudo de Obsidiana</p>
-            <p>A cambio de: <strong>15 pts de vida</strong> O <strong>Maldición: ${randomCurse.name}</strong><br>
-            <em>${randomCurse.description}</em></p>
-            ${canAfford ? `
-            <button onclick="acceptMerchantDeal('life', '${randomCurse.id}')">Pagar 15 pts de vida</button>
-            <button onclick="acceptMerchantDeal('curse', '${randomCurse.id}')">Aceptar maldición</button>
-            ` : `<p style="color:#e74c3c">⚠️ No te queda suficiente sangre para este trato.</p>
-            <button onclick="acceptMerchantDeal('curse', '${randomCurse.id}')">Aceptar maldición</button>`}
-        </div>
+      <div class="merchant-deal">
+        <h4>⚔️ Trato del Mercader</h4>
+        <p>Espada de Obsidiana + Escudo de Diamante<br><strong>O</strong><br>Espada de Diamante + Escudo de Obsidiana</p>
+        <p>A cambio de: <strong>15 pts de vida</strong> O <strong>Maldición: ${randomCurse.name}</strong><br>
+        <em>${randomCurse.description}</em></p>
+        ${canAfford ? `
+        <button onclick="acceptMerchantDeal('life', '${randomCurse.id}')">Pagar 15 pts de vida</button>
+        <button onclick="acceptMerchantDeal('curse', '${randomCurse.id}')">Aceptar maldición</button>
+        ` : `<p style="color:#e74c3c">⚠️ No te queda suficiente sangre para este trato.</p>
+        <button onclick="acceptMerchantDeal('curse', '${randomCurse.id}')">Aceptar maldición</button>`}
+      </div>
     `;
 
-    // Opción ancestral solo para magos
-    const ancestralCurse = getRandomCurse();
     const ancestralHTML = isMage ? `
-        <hr style="border-color:#8e44ad; margin: 16px 0">
-        <div class="merchant-deal">
-            <h4>🔮 Pacto Ancestral <em>(solo magos)</em></h4>
-            <p>Espada del Mercader + Escudo del Mercader + Brazalete del Mercader<br>
-            Golpes críticos 15% · Escudo irrompible (35% bloqueo, mín 10%) · Clase híbrida</p>
-            <p>A cambio de: <strong>15 pts de vida</strong> + <strong>Maldición: ${ancestralCurse.name}</strong><br>
-            <em>${ancestralCurse.description}</em></p>
-            ${canAfford ? `<button style="background:#8e44ad" onclick="acceptAncestralPact('${ancestralCurse.id}')">Firmar Pacto Ancestral</button>`
-            : `<p style="color:#e74c3c">⚠️ No te queda suficiente sangre.</p>`}
-        </div>
+      <hr style="border-color:#8e44ad; margin: 16px 0">
+      <div class="merchant-deal">
+        <h4>🔮 Pacto Ancestral <em>(solo magos)</em></h4>
+        <p>Espada del Mercader + Escudo del Mercader + Brazalete del Mercader<br>
+        Golpes críticos 15% · Escudo irrompible (35% bloqueo, mín 10%) · Clase híbrida</p>
+        <p>A cambio de: <strong>15 pts de vida</strong> + <strong>Maldición: ${ancestralCurse.name}</strong><br>
+        <em>${ancestralCurse.description}</em></p>
+        ${canAfford ? `<button style="background:#8e44ad" onclick="acceptAncestralPact('${ancestralCurse.id}')">Firmar Pacto Ancestral</button>`
+        : `<p style="color:#e74c3c">⚠️ No te queda suficiente sangre.</p>`}
+      </div>
     ` : '';
 
     modal.innerHTML = `
-        <div class="modal-content">
-            <div style="text-align:center; margin-bottom:12px">
-                <img src="./images/mercader.jpg" alt="Mercader" style="width:80px;height:80px;border-radius:50%;border:2px solid #e67e22;object-fit:cover;">
-            </div>
-            <h3 style="color:#e67e22; text-align:center">El Mercader</h3>
-            <p style="font-style:italic; text-align:center; color:#bdc3c7">"Tengo exactamente lo que necesitás... por un pequeño precio."</p>
-            ${commonDealHTML}
-            ${ancestralHTML}
-            <button style="background:#555; margin-top:8px" onclick="closeMerchant()">Rechazar y continuar</button>
+      <div class="modal-content">
+        <div style="text-align:center; margin-bottom:12px">
+          <img src="./images/mercader.jpg" alt="Mercader" style="width:80px;height:80px;border-radius:50%;border:2px solid #e67e22;object-fit:cover;">
         </div>
+        <h3 style="color:#e67e22; text-align:center">El Mercader</h3>
+        <p id="merchantTypewriter"></p>
+        ${commonDealHTML}
+        ${ancestralHTML}
+        <button style="background:#555; margin-top:8px" onclick="closeMerchant()">Rechazar y continuar</button>
+      </div>
     `;
 
     document.body.appendChild(modal);
+  });
 }
 
 function getRandomCurse() {
@@ -873,6 +879,7 @@ function acceptMerchantDeal(paymentType, curseId) {
 
     player.sword = combo.sword;
     player.shield = combo.shield;
+    
 
     if (paymentType === 'life') {
         player.hp -= 15;
@@ -900,7 +907,7 @@ function acceptAncestralPact(curseId) {
         updatePlayerStats();
         return false;
     };
-
+    player.equipBracelet(merchantBracelet);
     // Pagar precio
     player.hp -= 15;
     applyCurse(curseId);
@@ -972,10 +979,11 @@ function showHybridSkillChoice() {
 }
 
 function closeMerchant() {
-    const modal = document.getElementById("merchantModal");
-    if (modal) modal.remove();
+  const modal = document.getElementById("merchantModal");
+  if (modal) modal.remove();
+  const overlay = document.getElementById("merchantOverlay");
+  if (overlay) overlay.remove();
 }
-
 function prepareNextMonsterAfterMerchant() {
     // Continuar el flujo normal
     monster = generateMonster(monstersDefeated);
@@ -1003,4 +1011,95 @@ function takeAncestralPotion() {
     document.getElementById("skillButton").classList.remove("hidden");
     updateStats(`Tomaste una poción de ${currentWeaponDrop.potion.name}.`);
     prepareNextMonster(`Siguiente combate.`);
+}
+function spawnSmoke() {
+  return new Promise(resolve => {
+    const count = 30;
+    const centerX = window.innerWidth / 2;
+
+    for (let i = 0; i < count; i++) {
+      setTimeout(() => {
+        const particle = document.createElement("div");
+        particle.classList.add("smoke-particle");
+
+        const duration = 1.5 + Math.random() * 1.2;
+        const offsetX = (Math.random() - 0.5) * 300;
+
+        particle.style.setProperty("--duration", `${duration}s`);
+        particle.style.left = `${centerX + offsetX}px`;
+        particle.style.bottom = `${Math.random() * 80}px`;
+
+        document.body.appendChild(particle);
+        setTimeout(() => particle.remove(), duration * 1000);
+      }, i * 60);
+    }
+
+    // Resolver cuando termina el humo
+    setTimeout(resolve, count * 60 + 800);
+  });
+}
+
+function typewriterEffect(elementId, text, speed = 45) {
+  const el = document.getElementById(elementId);
+  if (!el) return;
+  el.textContent = "";
+  let i = 0;
+  const interval = setInterval(() => {
+    el.textContent += text[i];
+    i++;
+    if (i >= text.length) clearInterval(interval);
+  }, speed);
+}
+
+async function showMerchantWithEffects(buildModalFn) {
+  // 1 — Crear overlay y oscurecer pantalla
+  const overlay = document.createElement("div");
+  overlay.id = "merchantOverlay";
+  document.body.appendChild(overlay);
+
+  // Forzar reflow para que la transición arranque
+  overlay.getBoundingClientRect();
+  overlay.classList.add("dark");
+
+  // 2 — Esperar que oscurezca
+  await new Promise(r => setTimeout(r, 900));
+
+  // 3 — Humo
+  await spawnSmoke();
+
+  // 4 — Construir y mostrar modal
+  buildModalFn();
+
+  // 5 — Typewriter después del zoom
+  setTimeout(() => {
+    typewriterEffect("merchantTypewriter", '"Tengo exactamente lo que necesitás... por un pequeño precio."', 45);
+  }, 750);
+}
+function spawnLeaf() {
+  const leaves = ['🍃', '🌿'];
+  const leaf = document.createElement("div");
+  leaf.classList.add("leaf");
+  leaf.innerText = leaves[Math.floor(Math.random() * leaves.length)];
+
+  const duration = 4 + Math.random() * 4;
+  leaf.style.left = `${Math.random() * 100}vw`;
+  leaf.style.fontSize = `${10 + Math.random() * 10}px`;
+  leaf.style.animationDuration = `${duration}s`;
+  leaf.style.opacity = 0.6 + Math.random() * 0.4;
+
+  document.body.appendChild(leaf);
+  setTimeout(() => leaf.remove(), duration * 1000);
+}
+
+let leafInterval = null;
+
+function startLeaves() {
+  if (leafInterval) return;
+  leafInterval = setInterval(spawnLeaf, 400);
+}
+
+function stopLeaves() {
+  clearInterval(leafInterval);
+  leafInterval = null;
+  document.querySelectorAll(".leaf").forEach(l => l.remove());
 }

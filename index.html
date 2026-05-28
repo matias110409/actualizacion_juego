@@ -14,34 +14,88 @@
 
     <!-- Pantalla de inicio -->
     <div id="intro-screen">
-        <h1>Bienvenido a Mazmorras</h1>
-        <p>Este es un juego de rol donde te enfrentarás a diversos monstruos y jefes finales. Debes elegir una clase, luchar con monstruos, usar habilidades y estrategias para ganar. Aquí están algunas de las funciones:</p>
-        <ul>
-            <li><strong>Guerrero</strong>: Aumenta su daño y reduce el daño recibido.</li>
-            <li><strong>Mago</strong>: Recupera vida y mejora sus habilidades defensivas.</li>
-            <li><strong>Explorador</strong>: Repara su escudo y tiene la posibilidad de mejorar su espada.</li>
-            <li><strong>Pociones</strong>:<br> <span class="underline">Curación</span>: recupera 20 puntos de vida.<br> <span class="underline">Fortaleza</span> : aumenta el ataque un 15%
-                <br> <span class="underline">Protección</span> : aumenta aumenta probabilidad de bloqueo un 10%<br> <span class="underline">Energía</span> : recarga 2 puntos de Habilidad</li>
-            <li><strong>Brazaletes</strong>:<br> <span class="underline">Fuerza</span> : aumenta atque un 15%.<br> <span class="underline">Defensa</span> : aumenta probabilidad de bloqueo un 10%.<br>
-            <span class="underline">Agilidad</span> : aumenta la probabilidad de esquivar ataques en un 10%.</li> 
-        </ul>
-        <button onclick="goToClassSelection()">Ir a selección de personaje</button>
+    <h1>Mazmorras</h1>
+    <div class="pergamino">
+        <div class="contenido">
+            <p>Este es un juego de rol donde te enfrentarás a diversos monstruos y jefes finales. Debes elegir una clase, luchar con monstruos, usar habilidades y estrategias para ganar.</p>
+            <hr class="divider">
+            <ul>
+                <li><strong>Guerrero</strong>: Aumenta su daño y reduce el daño recibido.</li>
+                <li><strong>Mago</strong>: Recupera vida y mejora sus habilidades defensivas.</li>
+                <li><strong>Explorador</strong>: Repara su escudo y tiene la posibilidad de mejorar su espada.</li>
+                <hr class="divider">
+                <li><strong>Pociones</strong>:<br>
+                    <span class="underline">Curación</span>: recupera 20 puntos de vida.<br>
+                    <span class="underline">Fortaleza</span>: aumenta el ataque un 15%.<br>
+                    <span class="underline">Protección</span>: aumenta probabilidad de bloqueo un 10%.<br>
+                    <span class="underline">Energía</span>: recarga 2 puntos de Habilidad.
+                </li>
+                <hr class="divider">
+                <li><strong>Brazaletes</strong>:<br>
+                    <span class="underline">Fuerza</span>: aumenta ataque un 15%.<br>
+                    <span class="underline">Defensa</span>: aumenta probabilidad de bloqueo un 10%.<br>
+                    <span class="underline">Agilidad</span>: aumenta la probabilidad de esquivar ataques en un 10%.
+                </li>
+            </ul>
+        </div>
     </div>
+    <button onclick="goToClassSelection()">Ir a selección de personaje</button>
+</div>
 
     <!-- Pantalla de selección de clase -->
     <div id="start-screen" class="hidden">
         <h1>Mazmorras</h1>
-        <label for="playerNameInput">Ingresa tu nombre: </label>
-        <input type="text" id="playerNameInput">
-        <br>
-        <label>Elige tu clase:</label>
-        <div id="classButtons">
-            <button onclick="selectClass('Guerrero')"><i class="fa-solid fa-shield"></i> Guerrero</button>
-            <button onclick="selectClass('Mago')"><i class="fa-solid fa-hat-wizard"></i> Mago</button>
-            <button onclick="selectClass('Explorador')"><i class="fa-solid fa-binoculars"></i> Explorador</button>
+        <div id="nameInputContainer">
+            <label for="playerNameInput">jugador: </label>
+            <input type="text" id="playerNameInput" placeholder="Tu nombre...">
         </div>
-        <br><br>
-        <button onclick="startGame()">Comenzar Juego</button>
+        <label id="classLabel">Elige tu clase:</label>
+        <div id="classCards">
+
+            <div class="class-card" id="card-Guerrero" onclick="selectClass('Guerrero')">
+                <div class="card-bg" style="background-image: url('./images/card_guerrero.jpg')"></div>
+                <div class="card-overlay"></div>
+                <div class="card-content">
+                    <div class="card-icon"><i class="fa-solid fa-shield"></i></div>
+                    <h3 class="card-title">Guerrero</h3>
+                    <p class="card-desc">Alto daño y resistencia. Dobla su fuerza en batalla y reduce el daño recibido.</p>
+                    <div class="card-skill">
+                        <span class="skill-label">Habilidad</span>
+                        <span class="skill-name">Furia de Batalla</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="class-card" id="card-Mago" onclick="selectClass('Mago')">
+                <div class="card-bg" style="background-image: url('./images/card_mago.jpg')"></div>
+                <div class="card-overlay"></div>
+                <div class="card-content">
+                    <div class="card-icon"><i class="fa-solid fa-hat-wizard"></i></div>
+                    <h3 class="card-title">Mago</h3>
+                    <p class="card-desc">Maestro de la recuperación. Restaura vida y fortalece sus defensas con magia ancestral.</p>
+                    <div class="card-skill">
+                        <span class="skill-label">Habilidad</span>
+                        <span class="skill-name">Meditación</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="class-card" id="card-Explorador" onclick="selectClass('Explorador')">
+                <div class="card-bg" style="background-image: url('./images/card_explorador.jpg')"></div>
+                <div class="card-overlay"></div>
+                <div class="card-content">
+                    <div class="card-icon"><i class="fa-solid fa-binoculars"></i></div>
+                    <h3 class="card-title">Explorador</h3>
+                    <p class="card-desc">Ingenioso y adaptable. Repara su equipo en plena batalla y mejora sus armas.</p>
+                    <div class="card-skill">
+                        <span class="skill-label">Habilidad</span>
+                        <span class="skill-name">Fabricación</span>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+        <button onclick="startGame()" id="startButton">Comenzar Juego</button>
     </div>
 
     <!-- Pantalla de juego -->
@@ -127,7 +181,7 @@
             <h4>🗺️ Monstruo Explorador</h4>
             <p><strong>Rompe Escudo</strong> — 15% de chance de destruir tu escudo de un golpe.</p>
             <h4>💀 Jefe Final</h4>
-            <p>100 puntos de vida y ataque elevado. Aparece en el combate 10. Sin habilidad especial, pero es el más resistente.</p>
+            <p>100 puntos de vida y ataque elevado. Aparece en el combate 10. posee todas las habilidades de todos los monstruos.</p>
             </div>
          </div>
     </div>
