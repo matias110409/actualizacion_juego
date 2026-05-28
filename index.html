@@ -14,33 +14,30 @@
 
     <!-- Pantalla de inicio -->
     <div id="intro-screen">
-    <h1>Mazmorras</h1>
-    <div class="pergamino">
-        <div class="contenido">
-            <p>Este es un juego de rol donde te enfrentarás a diversos monstruos y jefes finales. Debes elegir una clase, luchar con monstruos, usar habilidades y estrategias para ganar.</p>
-            <hr class="divider">
-            <ul>
-                <li><strong>Guerrero</strong>: Aumenta su daño y reduce el daño recibido.</li>
-                <li><strong>Mago</strong>: Recupera vida y mejora sus habilidades defensivas.</li>
-                <li><strong>Explorador</strong>: Repara su escudo y tiene la posibilidad de mejorar su espada.</li>
-                <hr class="divider">
-                <li><strong>Pociones</strong>:<br>
-                    <span class="underline">Curación</span>: recupera 20 puntos de vida.<br>
-                    <span class="underline">Fortaleza</span>: aumenta el ataque un 15%.<br>
-                    <span class="underline">Protección</span>: aumenta probabilidad de bloqueo un 10%.<br>
-                    <span class="underline">Energía</span>: recarga 2 puntos de Habilidad.
-                </li>
-                <hr class="divider">
-                <li><strong>Brazaletes</strong>:<br>
-                    <span class="underline">Fuerza</span>: aumenta ataque un 15%.<br>
-                    <span class="underline">Defensa</span>: aumenta probabilidad de bloqueo un 10%.<br>
-                    <span class="underline">Agilidad</span>: aumenta la probabilidad de esquivar ataques en un 10%.
-                </li>
-            </ul>
+        <h1 id="mainTitle">MAZMORRAS</h1>
+        <div id="introButtons">
+            <button class="intro-btn" onclick="goToClassSelection()">INICIAR JUEGO</button>
+            <button class="intro-btn" onclick="toggleConfig()">CONFIGURACIÓN</button>
+        </div>
+        <div id="configPanel">
+    <div id="configPanelInner">
+            <h2 id="configTitle">CONFIGURACIÓN</h2>
+
+            <div class="config-row">
+                <label for="volumeSlider">VOLUMEN</label>
+                <input type="range" id="volumeSlider" min="0" max="1" step="0.01" value="1" oninput="setVolume(this.value)">
+            </div>
+
+            <div class="config-row">
+                <label>PROBAR SONIDO</label>
+                <button class="config-sound-btn" onclick="testSound()">🔊</button>
+            </div>
+
+            <button class="config-back-btn" onclick="toggleConfig()">← VOLVER</button>
         </div>
     </div>
-    <button onclick="goToClassSelection()">Ir a selección de personaje</button>
-</div>
+
+    </div>
 
     <!-- Pantalla de selección de clase -->
     <div id="start-screen" class="hidden">

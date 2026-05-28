@@ -146,6 +146,7 @@ applySkill(className) {
             break;
         case "Mago":
             this.recoverHealth(15);
+            setPlayerSprite("heal");
             this.shield.blockChance += 0.05;
             document.getElementById("message").innerText += `\n¡Meditación activada! +15 vida y +5% bloqueo.`;
             updateStats();
@@ -306,7 +307,34 @@ const merchantSword = new Sword("Espada del Mercader", 3);
 const merchantShield = new Shield("Escudo del Mercader", 0.35, Infinity);
 const merchantBracelet = new Bracelet("Brazalete del Mercader", (player) => {});
 merchantShield.isUnbreakable = true;
+//nuevos avatars
+const characterSprites = {
+  "Mago": {
+    default: "./images/mago_default.gif",
+    attack: "./images/mago_atackk.gif",
+    damage: "./images/mago_damage.gif",
+    block: "./images/mago_block.gif",
+    dodge: "./images/mago_esquive.gif",
+    heal: "./images/mago_heling.gif",
+  },
+  "Guerrero": { default: "./images/card_guerrero.jpg" },
+  "Explorador": { default: "./images/card_explorador.jpg" },
+};
 
+function setPlayerSprite(action = "default") {
+  const sprites = characterSprites[player.playerClass];
+  if (!sprites) return;
+  const src = sprites[action] || sprites.default;
+  document.getElementById("playerAvatar").src = src;
+
+  // Volver al default después de la animación
+  if (action !== "default") {
+    clearTimeout(window.spriteResetTimer);
+    window.spriteResetTimer = setTimeout(() => {
+      document.getElementById("playerAvatar").src = sprites.default;
+    }, 1000);
+  }
+}
 // Sobrescribir takeDamage para el escudo del mercader
 const originalTakeDamage = Shield.prototype.takeDamage;
 
@@ -338,6 +366,7 @@ function startGame() {
 
   document.getElementById("start-screen").classList.add("hidden");
   document.getElementById("game-screen").classList.remove("hidden");
+  setPlayerSprite("default");
 }
 
 function generateMonster(index) {
@@ -357,7 +386,7 @@ function generateMonster(index) {
 }
 function playerAttack() {
     const damage = player.attack();
-
+    setPlayerSprite("attack");
     monster.hp -= damage;
 
     if (player.lastAttackWasCritical) {
@@ -414,7 +443,13 @@ function playerAttack() {
         }
 
     } else {
+        document.getElementById("attackButton").disabled = true;
+        document.getElementById("blockButton").disabled = true;
+        setTimeout(() => {
         monsterAttack();
+        document.getElementById("attackButton").disabled = false;
+        document.getElementById("blockButton").disabled = false;
+        }, 900);
     }
 }
 function playerBlock() {
@@ -423,6 +458,7 @@ function playerBlock() {
     const shieldBreakSound = document.getElementById("shieldBreakSound");
 
     if (blocked) {
+        setPlayerSprite("block");
         blockSound.play();
         if (player.curseName === "E") {
             // Maldición E: bloquear exitoso cuesta 5 vida
@@ -458,9 +494,11 @@ function monsterAttack() {
     const dodged = player.dodge();
 
     if (dodged) {
+        setPlayerSprite("dodge");
         spawnFloatingNumber(0, "dodge", "playerAvatar");
         updateStats(`${player.name} esquivó el ataque.`);
     } else {
+        setPlayerSprite("damage");
         let damage = Math.floor(Math.random() * monster.attack) + 1;
 
         // 👇 reducción de daño del Guerrero
@@ -661,16 +699,40 @@ function usePotion() {
   }
 }
 function goToClassSelection() {
-  stopLeaves();
-  document.getElementById("intro-screen").classList.add("hidden");
-  document.getElementById("start-screen").classList.remove("hidden");
-}
+  const overlay = document.createElement("div");
+  overlay.id = "transitionOverlay";
+  overlay.style.cssText = `
+    position: fixed;
+    inset: 0;
+    background: black;
+    opacity: 0;
+    z-index: 1000;
+    transition: opacity 0.6s ease;
+    pointer-events: none;
+  `;
+  document.body.appendChild(overlay);
 
+  // Fase 1: oscurecer
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => {
+      overlay.style.opacity = "1";
+    });
+  });
+
+  // Fase 2: cambiar pantalla cuando está negro
+  setTimeout(() => {
+    document.getElementById("intro-screen").style.display = "none";
+    document.getElementById("start-screen").classList.remove("hidden");
+
+    // Fase 3: aclarar
+    overlay.style.opacity = "0";
+    setTimeout(() => overlay.remove(), 600);
+  }, 600);
+}
 // Asegurar de que la pantalla de selección de clase esté oculta al inicio
 document.addEventListener("DOMContentLoaded", function() {
   document.getElementById("intro-screen").classList.remove("hidden");
   document.getElementById("start-screen").classList.add("hidden");
-  startLeaves();
 });
 
 function toggleModal(id) {
@@ -1075,31 +1137,22 @@ async function showMerchantWithEffects(buildModalFn) {
     typewriterEffect("merchantTypewriter", '"Tengo exactamente lo que necesitás... por un pequeño precio."', 45);
   }, 750);
 }
-function spawnLeaf() {
-  const leaves = ['🍃', '🌿'];
-  const leaf = document.createElement("div");
-  leaf.classList.add("leaf");
-  leaf.innerText = leaves[Math.floor(Math.random() * leaves.length)];
 
-  const duration = 4 + Math.random() * 4;
-  leaf.style.left = `${Math.random() * 100}vw`;
-  leaf.style.fontSize = `${10 + Math.random() * 10}px`;
-  leaf.style.animationDuration = `${duration}s`;
-  leaf.style.opacity = 0.6 + Math.random() * 0.4;
-
-  document.body.appendChild(leaf);
-  setTimeout(() => leaf.remove(), duration * 1000);
-}
 
 let leafInterval = null;
 
-function startLeaves() {
-  if (leafInterval) return;
-  leafInterval = setInterval(spawnLeaf, 400);
+function toggleConfig() {
+  const panel = document.getElementById("configPanel");
+  panel.classList.toggle("open");
 }
 
-function stopLeaves() {
-  clearInterval(leafInterval);
-  leafInterval = null;
-  document.querySelectorAll(".leaf").forEach(l => l.remove());
+function setVolume(value) {
+  document.getElementById("blockSound").volume = value;
+  document.getElementById("shieldBreakSound").volume = value;
+}
+
+function testSound() {
+  const sound = document.getElementById("blockSound");
+  sound.currentTime = 0;
+  sound.play();
 }
