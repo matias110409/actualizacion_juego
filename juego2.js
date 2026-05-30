@@ -107,14 +107,14 @@ class Player {
   }
 
   takeShieldDamage(damage) {
-      const shieldBreakSound = document.getElementById("shieldBreakSound");
-      if (this.shield && this.shield.takeDamage(damage)) {
-          shieldBreakSound.play();
-          document.getElementById("message").innerText += `\n¡Tu escudo se ha roto!`;
-          document.getElementById("blockButton").disabled = true;
-      }
-      updatePlayerStats();
-  }
+        const shieldBreakSound = document.getElementById("shieldBreakSound");
+        if (this.shield && this.shield.takeDamage(damage)) {
+            shieldBreakSound.play();
+            document.getElementById("message").innerText += `\n¡Tu escudo se ha roto!`;
+            document.getElementById("cardBloqueo").classList.add("disabled");
+        }
+        updatePlayerStats();
+   }
 
   recoverHealth(amount) {
       this.hp = Math.min(this.hp + amount, 50); // Recuperar vida del jugador
@@ -122,11 +122,6 @@ class Player {
 
   useSkill() {
     if (this.skillUses > 0) {
-        // Si es mago con pacto ancestral, mostrar elección
-        if (this.playerClass === "Mago" && hybridClass) {
-            showHybridSkillChoice();
-            return;
-        }
         this.applySkill(this.playerClass);
     } else {
         document.getElementById("message").innerText += `\nNo te quedan habilidades para usar.`;
@@ -146,28 +141,25 @@ applySkill(className) {
             break;
         case "Mago":
             this.recoverHealth(15);
-            setPlayerSprite("heal");
             this.shield.blockChance += 0.05;
             document.getElementById("message").innerText += `\n¡Meditación activada! +15 vida y +5% bloqueo.`;
             updateStats();
             break;
         case "Explorador":
             if (this.shield.isUnbreakable) {
-                // Reparar escudo del mercader
                 this.shield.broken = false;
                 this.shield.blockChance = Math.max(this.shield.blockChance, 0.10);
-                // Si quedó en 0 por el monstruo, restaurar al mínimo jugable
-                if (this.shield.blockChance === 0) this.shield.blockChance = 0.10;
             } else {
                 this.shield.repair();
             }
+            this.shield.broken = false;
+            document.getElementById("cardBloqueo").classList.remove("disabled");
             if (Math.random() < 0.5) {
                 this.upgradeSword();
                 document.getElementById("message").innerText += `\n¡Fabricación activada! Escudo reparado y espada mejorada.`;
             } else {
                 document.getElementById("message").innerText += `\n¡Fabricación activada! Escudo reparado.`;
             }
-            document.getElementById("blockButton").disabled = false;
             break;
     }
     this.skillUses--;
@@ -257,13 +249,14 @@ const specialAbilities = {
       return false;
   },
   explorador: (player, monster) => {
-      if (Math.random() < 0.15) {
-        player.shield.broken = true;
-          player.shield.hp = 0;
-          document.getElementById("message").innerText += `\n¡${monster.name} ha roto el escudo de ${player.name}!`;
-          document.getElementById("blockButton").disabled = true;
-      }
-  },
+        if (Math.random() < 0.15) {
+            player.shield.broken = true;
+            player.shield.hp = 0;
+            document.getElementById("message").innerText += `\n¡${monster.name} ha roto el escudo de ${player.name}!`;
+            document.getElementById("cardBloqueo").classList.add("disabled");
+            updatePlayerStats();
+        }
+    },
   boss: (player, monster) => {
         if (Math.random() < 0.40) {
             const roll = Math.random();
@@ -288,9 +281,10 @@ const specialAbilities = {
                 // Habilidad de explorador: rompe escudo
                 if (Math.random() < 0.15 && player.shield && !player.shield.isUnbreakable) {
                     player.shield.hp = 0;
+                    player.shield.broken = true;
                     spawnFloatingNumber(0, "shield", "playerAvatar");
                     document.getElementById("message").innerText += `\n¡El Jefe Final destruyó tu escudo!`;
-                    document.getElementById("blockButton").disabled = true;
+                    document.getElementById("cardBloqueo").classList.add("disabled");
                 }
             }
         }
@@ -308,33 +302,8 @@ const merchantShield = new Shield("Escudo del Mercader", 0.35, Infinity);
 const merchantBracelet = new Bracelet("Brazalete del Mercader", (player) => {});
 merchantShield.isUnbreakable = true;
 //nuevos avatars
-const characterSprites = {
-  "Mago": {
-    default: "./images/mago_default.gif",
-    attack: "./images/mago_atackk.gif",
-    damage: "./images/mago_damage.gif",
-    block: "./images/mago_block.gif",
-    dodge: "./images/mago_esquive.gif",
-    heal: "./images/mago_heling.gif",
-  },
-  "Guerrero": { default: "./images/card_guerrero.jpg" },
-  "Explorador": { default: "./images/card_explorador.jpg" },
-};
 
-function setPlayerSprite(action = "default") {
-  const sprites = characterSprites[player.playerClass];
-  if (!sprites) return;
-  const src = sprites[action] || sprites.default;
-  document.getElementById("playerAvatar").src = src;
 
-  // Volver al default después de la animación
-  if (action !== "default") {
-    clearTimeout(window.spriteResetTimer);
-    window.spriteResetTimer = setTimeout(() => {
-      document.getElementById("playerAvatar").src = sprites.default;
-    }, 1000);
-  }
-}
 // Sobrescribir takeDamage para el escudo del mercader
 const originalTakeDamage = Shield.prototype.takeDamage;
 
@@ -355,10 +324,10 @@ function startGame() {
 
   player = new Player(playerName, selectedClass);
   monster = generateMonster(monstersDefeated);
-    document.getElementById("mapToggleBtn").classList.remove("hidden");
+  document.getElementById("mapToggleBtn").classList.remove("hidden");
   document.getElementById("playerName").innerText = player.name;
   document.getElementById("playerClass").innerText = selectedClass;
-  document.getElementById("monsterAvatar").src = monster.avatar;
+ 
   updateEquipment();
   updateStats();
   updatePlayerStats();
@@ -366,7 +335,10 @@ function startGame() {
 
   document.getElementById("start-screen").classList.add("hidden");
   document.getElementById("game-screen").classList.remove("hidden");
-  setPlayerSprite("default");
+  updatePlayerCard();
+  updateMonsterCard(monster);
+  updateActionCards();
+  setHandVisible(true);
 }
 
 function generateMonster(index) {
@@ -386,7 +358,6 @@ function generateMonster(index) {
 }
 function playerAttack() {
     const damage = player.attack();
-    setPlayerSprite("attack");
     monster.hp -= damage;
 
     if (player.lastAttackWasCritical) {
@@ -396,6 +367,7 @@ function playerAttack() {
     }
 
     addAnimation(document.getElementById('playerHealthFill'), 'attack-animation');
+    updateStats();
 
     if (monster.hp <= 0) {
         monstersDefeated++;
@@ -413,21 +385,17 @@ function playerAttack() {
             potion: getRandomPotion(),
         };
 
-        // Si tiene pacto ancestral, solo mostrar opción de poción
+        setHandVisible(false);
+        disableHand(false); // limpiar cualquier disable pendiente
+
         if (hasAncestralPact) {
             message += `\nEl monstruo dejó caer una poción de ${currentWeaponDrop.potion.name}.`;
-            document.getElementById("attackButton").classList.add("hidden");
-            document.getElementById("blockButton").classList.add("hidden");
-            document.getElementById("skillButton").classList.add("hidden");
             document.getElementById("keepWeaponButton").classList.add("hidden");
             document.getElementById("changeWeaponButton").classList.add("hidden");
             document.getElementById("usePotionButton").classList.remove("hidden");
             document.getElementById("ancestralLootButton").classList.remove("hidden");
         } else {
             message += `\nEl monstruo dejó caer una espada de ${currentWeaponDrop.sword.name}, un escudo de ${currentWeaponDrop.shield.name}, un brazalete de ${currentWeaponDrop.bracelet.name} y una poción de ${currentWeaponDrop.potion.name}.`;
-            document.getElementById("attackButton").classList.add("hidden");
-            document.getElementById("blockButton").classList.add("hidden");
-            document.getElementById("skillButton").classList.add("hidden");
             document.getElementById("changeWeaponButton").classList.remove("hidden");
             document.getElementById("keepWeaponButton").classList.remove("hidden");
             document.getElementById("usePotionButton").classList.remove("hidden");
@@ -435,7 +403,6 @@ function playerAttack() {
 
         updateStats(message);
 
-        // Verificar si aparece el mercader (rondas impares 1,3,5,7 y solo una vez)
         if (!merchantAppeared && [1,3,5,7].includes(monstersDefeated)) {
             if (Math.random() < 0.20) {
                 setTimeout(() => showMerchant(), 800);
@@ -443,25 +410,26 @@ function playerAttack() {
         }
 
     } else {
-        document.getElementById("attackButton").disabled = true;
-        document.getElementById("blockButton").disabled = true;
+        disableHand(true);
         setTimeout(() => {
-        monsterAttack();
-        document.getElementById("attackButton").disabled = false;
-        document.getElementById("blockButton").disabled = false;
+            monsterAttack();
+            updateStats();
+            disableHand(false);
+            if (player.shield && player.shield.broken) {
+                document.getElementById("cardBloqueo").classList.add("disabled");
+            }
         }, 900);
     }
 }
 function playerBlock() {
+    disableHand(true);
     const blocked = player.block();
     const blockSound = document.getElementById("blockSound");
     const shieldBreakSound = document.getElementById("shieldBreakSound");
 
     if (blocked) {
-        setPlayerSprite("block");
         blockSound.play();
         if (player.curseName === "E") {
-            // Maldición E: bloquear exitoso cuesta 5 vida
             player.hp = Math.max(player.hp - 5, 1);
             spawnFloatingNumber(5, "damage", "playerAvatar");
             updateStats(`${player.name} bloqueó pero la maldición le costó 5 vida.`);
@@ -471,6 +439,9 @@ function playerBlock() {
             updateStats(`${player.name} bloqueó el ataque completamente.`);
         }
         spawnFloatingNumber(0, "block", "playerAvatar");
+        if (player.hp <= 0) { endGame(false); return; }
+        addAnimation(document.getElementById('playerHealthFill'), 'block-animation');
+        setTimeout(() => disableHand(false), 400);
     } else {
         let damage = Math.floor(Math.random() * monster.attack) + 1;
         if (player.damageReductionActive) {
@@ -484,21 +455,21 @@ function playerBlock() {
         player.recoverHealth(5);
         spawnFloatingNumber(5, "heal", "playerAvatar");
         updateStats(`No logró bloquear.`);
+        if (player.hp <= 0) { endGame(false); return; }
+        addAnimation(document.getElementById('playerHealthFill'), 'block-animation');
+        setTimeout(() => disableHand(false), 400);
     }
-    
-    if (player.hp <= 0) { endGame(false); return; }
-    addAnimation(document.getElementById('playerHealthFill'), 'block-animation');
 }
 
 function monsterAttack() {
     const dodged = player.dodge();
 
     if (dodged) {
-        setPlayerSprite("dodge");
+        
         spawnFloatingNumber(0, "dodge", "playerAvatar");
         updateStats(`${player.name} esquivó el ataque.`);
     } else {
-        setPlayerSprite("damage");
+    
         let damage = Math.floor(Math.random() * monster.attack) + 1;
 
         // 👇 reducción de daño del Guerrero
@@ -525,31 +496,33 @@ function changeWeapon() {
     if (player.potions.length < 3) {
         player.potions.push(currentWeaponDrop.potion);
     }
-    document.getElementById("blockButton").disabled = false;
-    prepareNextMonster(`${player.name} ahora usa la espada de ${player.sword.name} y el escudo de ${player.shield.name}.`);
+    document.getElementById("changeWeaponButton").classList.add("hidden");
+    document.getElementById("keepWeaponButton").classList.add("hidden");
+    document.getElementById("usePotionButton").classList.add("hidden");
     addAnimation(document.getElementById('currentWeapon'), 'weapon-change');
     addAnimation(document.getElementById('currentShield'), 'weapon-change');
     updatePlayerStats();
+    prepareNextMonster(`${player.name} ahora usa la espada de ${player.sword.name} y el escudo de ${player.shield.name}.`);
 }
 
 function keepWeapon() {
     if (player.potions.length < 3) {
         player.potions.push(currentWeaponDrop.potion);
     }
+    document.getElementById("changeWeaponButton").classList.add("hidden");
+    document.getElementById("keepWeaponButton").classList.add("hidden");
+    document.getElementById("usePotionButton").classList.add("hidden");
     prepareNextMonster(`${player.name} mantiene su equipo actual.`);
 }
 
 function prepareNextMonster(message) {
     monster = generateMonster(monstersDefeated);
-    document.getElementById("monsterAvatar").src = monster.avatar;
+    updateMonsterCard(monster);
     document.getElementById("changeWeaponButton").classList.add("hidden");
     document.getElementById("keepWeaponButton").classList.add("hidden");
-    document.getElementById("attackButton").classList.remove("hidden");
-    document.getElementById("blockButton").classList.remove("hidden");
-    document.getElementById("skillButton").classList.remove("hidden");
     document.getElementById("usePotionButton").classList.add("hidden");
+    document.getElementById("ancestralLootButton").classList.add("hidden");
 
-    // Maldición C: perder 3 vida al inicio de cada combate
     if (player.curseName === "C") {
         player.hp = Math.max(player.hp - 3, 1);
         message += `\nLa Deuda Eterna te cobra 3 puntos de vida.`;
@@ -563,6 +536,7 @@ function prepareNextMonster(message) {
     updateEquipment();
     updateStats(message);
     updateMapNodes();
+    setHandVisible(true);
 }
 
 function updateEquipment() {
@@ -595,7 +569,94 @@ function updatePlayerStats() {
         ? player.potions.map(p => p.name).join(", ")
         : "Ninguna";
 }
+function updatePlayerCard() {
+    const classBgs = {
+        "Guerrero": "./images/card_guerrero.jpg",
+        "Mago":     "./images/card_mago.jpg",
+        "Explorador": "./images/card_explorador.jpg"
+    };
+    const classIcons = {
+        "Guerrero":   '<i class="fa-solid fa-shield"></i>',
+        "Mago":       '<i class="fa-solid fa-hat-wizard"></i>',
+        "Explorador": '<i class="fa-solid fa-binoculars"></i>'
+    };
+    document.getElementById("playerCardBg").style.backgroundImage = `url('${classBgs[player.playerClass]}')`;
+    document.getElementById("playerCardIcon").innerHTML = classIcons[player.playerClass] || "";
+    document.getElementById("playerCardName").innerText = player.name;
+    document.getElementById("playerCardClassLabel").innerText = player.playerClass;
+}
+function updateActionCards() {
+    if (!player) return;
+    const cls = player.playerClass.toLowerCase();
+    document.getElementById("imgAtaque").src    = `./targetas/${cls}_ataque.jpg`;
+    document.getElementById("imgBloqueo").src   = `./targetas/${cls}_bloqueo.jpg`;
+    document.getElementById("imgHabilidad").src = `./targetas/${cls}_habilidad.jpg`;
+}
+function setHandVisible(visible) {
+    const hand = document.getElementById("actionHand");
+    const deck = document.getElementById("cardDeck");
+    if (!hand || !deck) return;
 
+    if (visible) {
+        // Activar mazo para que el jugador lo clickee
+        deck.classList.remove("deck-inactive");
+        // Asegurar que las cartas estén en estado inicial (guardadas)
+        ["cardAtaque", "cardBloqueo", "cardHabilidad", "cardHibrido"].forEach(id => {
+            const c = document.getElementById(id);
+            c.classList.remove("in-play", "returning", "selecting", "disabled");
+        });
+        hand.classList.add("hand-hidden");
+
+        // Chequeo escudo
+        if (player && player.shield && player.shield.broken) {
+            document.getElementById("cardBloqueo").classList.add("disabled");
+        }
+        // Ocultar híbrido si no hay pacto
+        if (!hasAncestralPact) {
+            hand.classList.remove("four-cards");
+        }
+    } else {
+        // Al derrotar monstruo: cartas vuelven al mazo
+        returnCards();
+    }
+}
+function disableHand(disabled) {
+    document.querySelectorAll(".action-card").forEach(c => {
+        if (disabled) {
+            c.classList.add("disabled");
+        } else {
+            c.classList.remove("disabled");
+        }
+    });
+    if (!disabled) {
+        if (player && player.shield && player.shield.broken) {
+            document.getElementById("cardBloqueo").classList.add("disabled");
+        }
+    }
+}
+
+function refreshBlockCard() {
+    const card = document.getElementById("cardBloqueo");
+    if (!card || !player) return;
+    if (!player.shield || player.shield.broken) {
+        card.classList.add("disabled");
+    } else {
+        card.classList.remove("disabled");
+    }
+}
+
+function updateMonsterCard(m) {
+    const icons = {
+        "Monstruo Comun":      "",
+        "Monstruo Mago":       "",
+        "Monstruo Guerrero":   "",
+        "Monstruo Explorador": "",
+        "Jefe Final":          ""
+    };
+    document.getElementById("monsterCardBg").style.backgroundImage = `url('${m.avatar}')`;
+    document.getElementById("monsterCardIcon").innerText = icons[m.name] || "";
+    document.getElementById("monsterCardName").innerText = m.name;
+}
 function endGame(victory) {
   document.getElementById("game-screen").classList.add("hidden");
   document.getElementById("end-screen").classList.remove("hidden");
@@ -612,10 +673,22 @@ function restartGame() {
     merchantAppeared = false;
     hasAncestralPact = false;
     hybridClass = null;
-    player = null; // 👈 forzar nuevo jugador en startGame
+    player = null;
 
-    document.getElementById("blockButton").disabled = false;
-    document.getElementById("monsterAvatar").src = "./images/monstruo_comun.jpg";
+    const hand = document.getElementById("actionHand");
+    if (hand) {
+        hand.classList.remove("four-cards");
+        hand.classList.remove("expanded");
+        hand.classList.add("hand-hidden");
+    }
+
+    // Limpiar disabled y expanded-pos de todas las cartas sin pasar por disableHand
+    document.querySelectorAll(".action-card").forEach(c => {
+        c.classList.remove("disabled");
+        c.classList.remove("expanded-pos");
+        c.classList.remove("selecting");
+    });
+
     document.getElementById("end-screen").classList.add("hidden");
     document.getElementById("start-screen").classList.remove("hidden");
     document.getElementById("mapToggleBtn").classList.add("hidden");
@@ -650,9 +723,7 @@ function addAnimation(element, animationClass) {
 }
 
 function useSkill() {
-  if (player) {
-      player.useSkill();
-  }
+    if (player) player.applySkill(player.playerClass);
 }
 
 function usePotion() {
@@ -675,7 +746,6 @@ function usePotion() {
             player.potions.splice(index, 1);
             updatePlayerStats();
             menu.remove();
-            // Cerrar también el menú de cambiar/mantener si está abierto
             document.getElementById("changeWeaponButton").classList.add("hidden");
             document.getElementById("keepWeaponButton").classList.add("hidden");
             document.getElementById("usePotionButton").classList.add("hidden");
@@ -759,16 +829,19 @@ function toggleModal(id) {
   };
 }
 function updateSkillButton() {
-    if (player.playerClass === "Mago" && hybridClass) {
-        document.getElementById("skillButton").innerText = ` Habilidad Dual`;
-        return;
-    }
-    const skillNames = {
-        "Guerrero": "⚔️ Furia de Batalla",
-        "Mago": " Meditación",
-        "Explorador": "🗺️ Fabricación"
+    const labels = {
+        "Guerrero":   "Furia",
+        "Mago":       "Meditar",
+        "Explorador": "Fabricar"
     };
-    document.getElementById("skillButton").innerText = skillNames[player.playerClass] || "Habilidad";
+    const labelEl = document.querySelector("#cardHabilidad .action-card-label");
+    if (labelEl && player) {
+        if (player.playerClass === "Mago" && hybridClass) {
+            labelEl.textContent = "Dual";
+        } else {
+            labelEl.textContent = labels[player.playerClass] || "Habilidad";
+        }
+    }
 }
 function spawnFloatingNumber(amount, type, anchorElementId) {
   const anchor = document.getElementById(anchorElementId);
@@ -934,14 +1007,12 @@ function applyCurse(curseId) {
 }
 
 function acceptMerchantDeal(paymentType, curseId) {
-    // Elegir combinación aleatoria
     const combo = Math.random() < 0.5
         ? { sword: swords.obsidiana, shield: new Shield("Diamante", 0.25, 25) }
         : { sword: swords.diamante, shield: new Shield("Obsidiana", 0.3, 30) };
 
     player.sword = combo.sword;
     player.shield = combo.shield;
-    
 
     if (paymentType === 'life') {
         player.hp -= 15;
@@ -949,11 +1020,10 @@ function acceptMerchantDeal(paymentType, curseId) {
         applyCurse(curseId);
     }
 
-    document.getElementById("blockButton").disabled = false;
     updateEquipment();
     updatePlayerStats();
-    updateStats(`El mercader te entregó una espada de ${combo.sword.name} y un escudo de ${combo.shield.name}.`);
     closeMerchant();
+    prepareNextMonsterAfterMerchant();
 }
 
 function acceptAncestralPact(curseId) {
@@ -980,7 +1050,7 @@ function acceptAncestralPact(curseId) {
 
     updateEquipment();
     updatePlayerStats();
-    document.getElementById("blockButton").disabled = false;
+    
 }
 
 function showHybridClassChoice() {
@@ -1006,13 +1076,27 @@ function selectHybridClass(className) {
     hybridClass = className;
     const modal = document.getElementById("hybridModal");
     if (modal) modal.remove();
-    updateSkillButton();
-    updateStats(`¡Pacto Ancestral firmado! Ahora eres un Mago-${hybridClass}.`);
+
+    const cls = className.toLowerCase();
+    const labelNames = { "Guerrero": "Furia", "Explorador": "Fabricar" };
+    document.getElementById("imgHibrido").src = `./targetas/${cls}_habilidad.jpg`;
+    document.getElementById("labelHibrido").textContent = labelNames[className] || className;
+
+    document.getElementById("actionHand").classList.add("four-cards");
+
     updatePlayerStats();
-    prepareNextMonsterAfterMerchant();
+    updateEquipment();
+
+    // Ocultar botones de loot y pasar al siguiente combate directamente
+    document.getElementById("changeWeaponButton").classList.add("hidden");
+    document.getElementById("keepWeaponButton").classList.add("hidden");
+    document.getElementById("usePotionButton").classList.add("hidden");
+    document.getElementById("ancestralLootButton").classList.add("hidden");
+
+    prepareNextMonster(`¡Pacto Ancestral firmado! Ahora eres un Mago-${hybridClass}.`);
 }
 
-function showHybridSkillChoice() {
+/*function showHybridSkillChoice() {
     const existing = document.getElementById("hybridSkillMenu");
     if (existing) { existing.remove(); return; }
 
@@ -1021,7 +1105,7 @@ function showHybridSkillChoice() {
     menu.innerHTML = `<p><strong>¿Qué habilidad querés usar?</strong></p>`;
 
     const btn1 = document.createElement("button");
-    btn1.innerText = " Meditación (Mago)";
+    btn1.innerText = "Meditación (Mago)";
     btn1.onclick = () => { player.applySkill("Mago"); menu.remove(); updateSkillButton(); };
 
     const btn2 = document.createElement("button");
@@ -1037,8 +1121,9 @@ function showHybridSkillChoice() {
     menu.appendChild(btn2);
     menu.appendChild(cancel);
 
-    document.getElementById("skillButton").insertAdjacentElement("afterend", menu);
-}
+    // Insertar en el game-screen en vez de junto al botón que ya no existe
+    document.getElementById("game-screen").appendChild(menu);
+}*/
 
 function closeMerchant() {
   const modal = document.getElementById("merchantModal");
@@ -1052,9 +1137,7 @@ function prepareNextMonsterAfterMerchant() {
     document.getElementById("monsterAvatar").src = monster.avatar;
     document.getElementById("changeWeaponButton").classList.add("hidden");
     document.getElementById("keepWeaponButton").classList.add("hidden");
-    document.getElementById("attackButton").classList.remove("hidden");
-    document.getElementById("blockButton").classList.remove("hidden");
-    document.getElementById("skillButton").classList.remove("hidden");
+    setHandVisible(true);
     document.getElementById("usePotionButton").classList.add("hidden");
     updateEquipment();
     updateStats(`Un nuevo enemigo aparece: ${monster.name}`);
@@ -1068,9 +1151,7 @@ function takeAncestralPotion() {
     player.potions.push(currentWeaponDrop.potion);
     updatePlayerStats();
     document.getElementById("ancestralLootButton").classList.add("hidden");
-    document.getElementById("attackButton").classList.remove("hidden");
-    document.getElementById("blockButton").classList.remove("hidden");
-    document.getElementById("skillButton").classList.remove("hidden");
+    document.getElementById("usePotionButton").classList.add("hidden");
     updateStats(`Tomaste una poción de ${currentWeaponDrop.potion.name}.`);
     prepareNextMonster(`Siguiente combate.`);
 }
@@ -1155,4 +1236,94 @@ function testSound() {
   const sound = document.getElementById("blockSound");
   sound.currentTime = 0;
   sound.play();
+}
+// ---- Lógica de la mano de cartas ----
+document.addEventListener("DOMContentLoaded", function () {
+    const deck = document.getElementById("cardDeck");
+
+    deck.addEventListener("click", () => {
+        if (deck.classList.contains("deck-inactive")) return;
+        dealCards();
+    });
+
+    document.querySelectorAll(".action-card").forEach(card => {
+        card.addEventListener("click", () => handleCardClick(card));
+    });
+});
+
+function dealCards() {
+    const deck = document.getElementById("cardDeck");
+    const hand = document.getElementById("actionHand");
+    deck.classList.add("deck-inactive");
+    hand.classList.remove("hand-hidden");
+
+    const cards = ["cardAtaque", "cardBloqueo", "cardHabilidad"];
+    if (hand.classList.contains("four-cards")) cards.push("cardHibrido");
+
+    // Resetear estado visual antes de animar
+    cards.forEach(id => {
+        const c = document.getElementById(id);
+        c.classList.remove("in-play", "returning", "selecting");
+    });
+
+    // Animar una por una con delay
+    cards.forEach((id, i) => {
+        setTimeout(() => {
+            const c = document.getElementById(id);
+            c.classList.add("in-play");
+        }, i * 150);
+    });
+}
+
+function returnCards() {
+    const deck = document.getElementById("cardDeck");
+    const hand = document.getElementById("actionHand");
+
+    const cards = ["cardAtaque", "cardBloqueo", "cardHabilidad", "cardHibrido"];
+
+    cards.forEach((id, i) => {
+        setTimeout(() => {
+            const c = document.getElementById(id);
+            c.classList.remove("in-play");
+            c.classList.add("returning");
+        }, i * 100);
+    });
+
+    // Después de que todas volvieron, ocultar la mano y activar el mazo
+    setTimeout(() => {
+        cards.forEach(id => {
+            document.getElementById(id).classList.remove("returning");
+        });
+        hand.classList.add("hand-hidden");
+        deck.classList.remove("deck-inactive");
+    }, cards.length * 100 + 450);
+}
+
+function handleCardClick(card) {
+    if (card.classList.contains("disabled")) return;
+
+    const action = card.dataset.action;
+    card.classList.add("selecting");
+    disableHand(true);
+
+    setTimeout(() => {
+        card.classList.remove("selecting");
+        if (action === "attack") {
+            playerAttack();
+        } else if (action === "block") {
+            playerBlock();
+        } else if (action === "skill") {
+            player.applySkill(player.playerClass);
+            disableHand(false);
+            if (player.shield && player.shield.broken) {
+                document.getElementById("cardBloqueo").classList.add("disabled");
+            }
+        } else if (action === "hybrid") {
+            player.applySkill(hybridClass);
+            disableHand(false);
+            if (player.shield && player.shield.broken) {
+                document.getElementById("cardBloqueo").classList.add("disabled");
+            }
+        }
+    }, 380);
 }
