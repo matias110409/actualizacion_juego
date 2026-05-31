@@ -16,18 +16,26 @@ class Shield {
 
 
     takeDamage(damage) {
-    if (this.isUnbreakable) return false;
-    this.hp -= damage;
-    if (this.hp <= 0) {
-        this.hp = 0;
-        this.broken = true;
-        return true;
+        if (this.isUnbreakable) return false;
+        this.hp -= damage;
+        if (this.hp <= 0) {
+            this.hp = 0;
+            this.broken = true;
+            blockCardsAllowed = false;  // <- agregar esta línea
+            return true;
+        }
+        return false;
     }
-    return false;
-}
-  repair() {
-      this.hp = shields[this.name.toLowerCase()].hp;
-  }
+    repair() {
+        const keys = Object.keys(shields);
+        for (const key of keys) {
+            const s = shields[key][this.playerClass];
+            if (s && s.name === this.name) {
+                this.hp = s.hp;
+                return;
+            }
+        }
+    }
 }
 
 class Bracelet {
@@ -65,8 +73,9 @@ class Player {
   constructor(name, playerClass) {
       this.name = name;
       this.hp = 50;
-      this.sword = swords.madera;
-      this.shield = new Shield("Madera", 0.1, 10);
+      this.sword = swords.basica[playerClass];
+    this.shield = Object.assign(new Shield(), shields.basica[playerClass]);
+    this.shield.playerClass = playerClass;
       this.playerClass = playerClass;
       this.skillUses = 3;
       this.skillActive = false;
@@ -110,11 +119,12 @@ class Player {
         const shieldBreakSound = document.getElementById("shieldBreakSound");
         if (this.shield && this.shield.takeDamage(damage)) {
             shieldBreakSound.play();
-            document.getElementById("message").innerText += `\n¡Tu escudo se ha roto!`;
-            document.getElementById("cardBloqueo").classList.add("disabled");
+            blockCardsAllowed = false;
+            document.getElementById("message").innerText += `\n¡Tu defensa se ha roto!`;
+            refreshBlockCards();
         }
         updatePlayerStats();
-   }
+    }
 
   recoverHealth(amount) {
       this.hp = Math.min(this.hp + amount, 50); // Recuperar vida del jugador
@@ -157,25 +167,28 @@ applySkill(className) {
                 this.shield.repair();
             }
             this.shield.broken = false;
-            document.getElementById("cardBloqueo").classList.remove("disabled");
+            
             if (Math.random() < 0.5) {
                 this.upgradeSword();
                 document.getElementById("message").innerText += `\n¡Fabricación activada! Escudo reparado y espada mejorada.`;
             } else {
                 document.getElementById("message").innerText += `\n¡Fabricación activada! Escudo reparado.`;
             }
+            blockCardsAllowed = true;
+            refreshBlockCards();
             break;
     }
     this.skillUses--;
     updatePlayerStats();
 }
-  upgradeSword() {
-      const swordKeys = Object.keys(swords);
-      const currentSwordIndex = swordKeys.indexOf(this.sword.name.toLowerCase());
-      if (currentSwordIndex < swordKeys.length - 1) {
-          this.sword = swords[swordKeys[currentSwordIndex + 1]];
-      }
-  }
+    upgradeSword() {
+        const swordKeys = Object.keys(swords);
+        const currentName = this.sword.name;
+        const currentIndex = swordKeys.findIndex(k => swords[k][this.playerClass].name === currentName);
+        if (currentIndex !== -1 && currentIndex < swordKeys.length - 1) {
+            this.sword = swords[swordKeys[currentIndex + 1]][this.playerClass];
+        }
+    }
 
   usePotion(potion) {
       if (this.potions.includes(potion)) {
@@ -203,20 +216,22 @@ function selectClass(playerClass) {
 }
 
 // Variables globales
+let discardMode = false;
+let discardCountThisTurn = 0;
 const swords = {
-  madera: new Sword("Madera", 1),
-  hierro: new Sword("Hierro", 1.5),
-  oro: new Sword("Oro", 2),
-  diamante: new Sword("Diamante", 3),
-  obsidiana: new Sword("Obsidiana", 4),
+  basica:     { Guerrero: new Sword("⚪ Espada Oxidada", 1),     Mago: new Sword("⚪ Rama Tallada", 1),         Explorador: new Sword("⚪ Cuchillo Oxidado", 1)    },
+  comun:      { Guerrero: new Sword("🟢 Espada de Hierro", 1.5), Mago: new Sword("🟢 Báculo de Roble", 1.5),   Explorador: new Sword("🟢 Daga Afilada", 1.5)     },
+  pocoComon:  { Guerrero: new Sword("🔵 Espada del Cruzado", 2), Mago: new Sword("🔵 Báculo Arcano", 2),       Explorador: new Sword("🔵 Daga del Cazador", 2)   },
+  rara:       { Guerrero: new Sword("🟣 Espada del Crepúsculo", 3), Mago: new Sword("🟣 Báculo del Oráculo", 3), Explorador: new Sword("🟣 Daga Venenosa", 3)    },
+  exotica:    { Guerrero: new Sword("🟠 Espada del Abismo", 4),  Mago: new Sword("🟠 Báculo del Vacío", 4),    Explorador: new Sword("🟠 Daga de la Sombra", 4) },
 };
 
 const shields = {
-  madera: new Shield("Madera", 0.1, 10),
-  hierro: new Shield("Hierro", 0.15, 15),
-  oro: new Shield("Oro", 0.2, 20),
-  diamante: new Shield("Diamante", 0.25, 25),
-  obsidiana: new Shield("Obsidiana", 0.3, 30),
+  basica:    { Guerrero: new Shield("⚪ Tablón de Madera", 0.1, 10),      Mago: new Shield("⚪ Sello Débil", 0.1, 10),         Explorador: new Shield("⚪ Señuelo Frágil", 0.1, 10)    },
+  comun:     { Guerrero: new Shield("🟢 Escudo de Hierro", 0.15, 15),     Mago: new Shield("🟢 Barrera Arcana", 0.15, 15),     Explorador: new Shield("🟢 Señuelo de Madera", 0.15, 15) },
+  pocoComon: { Guerrero: new Shield("🔵 Escudo del Bastión", 0.2, 20),    Mago: new Shield("🔵 Barrera de Cristal", 0.2, 20),  Explorador: new Shield("🔵 Señuelo Táctico", 0.2, 20)  },
+  rara:      { Guerrero: new Shield("🟣 Escudo del Juicio", 0.25, 25),    Mago: new Shield("🟣 Barrera del Éter", 0.25, 25),   Explorador: new Shield("🟣 Señuelo Ilusorio", 0.25, 25) },
+  exotica:   { Guerrero: new Shield("🟠 Escudo Eterno", 0.3, 30),         Mago: new Shield("🟠 Barrera Absoluta", 0.3, 30),    Explorador: new Shield("🟠 Señuelo Fantasmal", 0.3, 30) },
 };
 const bracelets = {
   fuerza: new Bracelet("Fuerza", (player) => player.attackMultiplier += 0.15),
@@ -259,7 +274,8 @@ const specialAbilities = {
             player.shield.broken = true;
             player.shield.hp = 0;
             document.getElementById("message").innerText += `\n¡${monster.name} ha roto el escudo de ${player.name}!`;
-            document.getElementById("cardBloqueo").classList.add("disabled");
+            blockCardsAllowed = false;
+            refreshBlockCards();
             updatePlayerStats();
         }
     },
@@ -291,7 +307,8 @@ const specialAbilities = {
                     player.shield.broken = true;
                     spawnFloatingNumber(0, "shield", "playerAvatar");
                     document.getElementById("message").innerText += `\n¡El Jefe Final destruyó tu escudo!`;
-                    document.getElementById("cardBloqueo").classList.add("disabled");
+                    blockCardsAllowed = false;
+                    refreshBlockCards();
                 }
             }
         }
@@ -304,8 +321,8 @@ let hasCursionB = false;
 let hasAncestralPact = false;
 let hybridClass = null; // "Guerrero" o "Explorador" para el mago híbrido
 
-const merchantSword = new Sword("Espada del Mercader", 3);
-const merchantShield = new Shield("Escudo del Mercader", 0.35, Infinity);
+const merchantSword = new Sword("❓ Arma No Identificada", 3);
+const merchantShield = new Shield("❓ Defensa No Identificada", 0.35, Infinity);
 const merchantBracelet = new Bracelet("Brazalete del Mercader", (player) => {});
 merchantShield.isUnbreakable = true;
 //nuevos avatars
@@ -338,13 +355,11 @@ function startGame() {
   updateEquipment();
   updateStats();
   updatePlayerStats();
-  updateSkillButton();
 
   document.getElementById("start-screen").classList.add("hidden");
   document.getElementById("game-screen").classList.remove("hidden");
   updatePlayerCard();
   updateMonsterCard(monster);
-  updateActionCards();
   setHandVisible(true);
   initIdleAnims();
 }
@@ -493,7 +508,7 @@ function playerAttack() {
                 document.getElementById("usePotionButton").classList.remove("hidden");
                 document.getElementById("ancestralLootButton").classList.remove("hidden");
             } else {
-                message += `\nEl monstruo dejó caer una espada de ${currentWeaponDrop.sword.name}, un escudo de ${currentWeaponDrop.shield.name}, un brazalete de ${currentWeaponDrop.bracelet.name} y una poción de ${currentWeaponDrop.potion.name}.`;
+                message += `\nEl monstruo dejó caer:\n${currentWeaponDrop.sword.name}\n${currentWeaponDrop.shield.name}\n${currentWeaponDrop.bracelet.name}\n ${currentWeaponDrop.potion.name}`;
                 document.getElementById("changeWeaponButton").classList.remove("hidden");
                 document.getElementById("keepWeaponButton").classList.remove("hidden");
                 document.getElementById("usePotionButton").classList.remove("hidden");
@@ -509,12 +524,13 @@ function playerAttack() {
 
         } else {
             disableHand(true);
+            discardCountThisTurn = 0;
             setTimeout(() => {
                 monsterAttack();
                 updateStats();
                 disableHand(false);
                 if (player.shield && player.shield.broken) {
-                    document.getElementById("cardBloqueo").classList.add("disabled");
+                    refreshBlockCards();
                 }
             }, 900);
         }
@@ -567,6 +583,7 @@ function playerBlock() {
         setTimeout(() => disableHand(false), 400);
     }
     restoreIdleAnim("playerAvatar");
+    discardCountThisTurn = 0;
 }
 
 function monsterAttack() {
@@ -601,10 +618,12 @@ function monsterAttack() {
             restoreIdleAnim("playerAvatar");
         }, 200);
     }
+    discardCountThisTurn = 0;
 }
 function changeWeapon() {
     player.sword = currentWeaponDrop.sword;
     player.shield = new Shield(currentWeaponDrop.shield.name, currentWeaponDrop.shield.blockChance, currentWeaponDrop.shield.hp);
+    player.shield.playerClass = player.playerClass;
     player.equipBracelet(currentWeaponDrop.bracelet);
     if (player.potions.length < 3) {
         player.potions.push(currentWeaponDrop.potion);
@@ -679,7 +698,7 @@ function updateStats(message = "") {
 function updatePlayerStats() {
     document.getElementById("playerSword").innerText = player.sword.name;
     document.getElementById("playerSwordDamage").innerText = player.sword.multiplier;
-    document.getElementById("playerShield").innerText = player.shield ? player.shield.name : "Sin Escudo";
+    document.getElementById("playerShield").innerText = player.shield ? player.shield.name : "Sin Defensa";
     document.getElementById("playerShieldHp").innerText = player.shield
         ? (player.shield.isUnbreakable ? "∞" : player.shield.hp)
         : "N/A";
@@ -706,65 +725,39 @@ function updatePlayerCard() {
     document.getElementById("playerCardBg").style.backgroundImage = `url('${classBgs[player.playerClass]}')`;
 
 }
-function updateActionCards() {
-    if (!player) return;
-    const cls = player.playerClass.toLowerCase();
-    document.getElementById("imgAtaque").src    = `./targetas/${cls}_ataque.jpg`;
-    document.getElementById("imgBloqueo").src   = `./targetas/${cls}_bloqueo.jpg`;
-    document.getElementById("imgHabilidad").src = `./targetas/${cls}_habilidad.jpg`;
-}
+
 function setHandVisible(visible) {
-    const hand = document.getElementById("actionHand");
-    const deck = document.getElementById("cardDeck");
-    if (!hand || !deck) return;
-
-    if (visible) {
-        // Activar mazo para que el jugador lo clickee
-        deck.classList.remove("deck-inactive");
-        // Asegurar que las cartas estén en estado inicial (guardadas)
-        ["cardAtaque", "cardBloqueo", "cardHabilidad", "cardHibrido"].forEach(id => {
-            const c = document.getElementById(id);
-            c.classList.remove("in-play", "returning", "selecting", "disabled");
-        });
-        hand.classList.add("hand-hidden");
-
-        // Chequeo escudo
-        if (player && player.shield && player.shield.broken) {
-            document.getElementById("cardBloqueo").classList.add("disabled");
-        }
-        // Ocultar híbrido si no hay pacto
-        if (!hasAncestralPact) {
-            hand.classList.remove("four-cards");
-        }
-    } else {
-        // Al derrotar monstruo: cartas vuelven al mazo
-        returnCards();
-    }
+  const deck = document.getElementById("cardDeck");
+  discardMode = false;
+  discardCountThisTurn = 0;
+  document.getElementById("discardBtn")?.classList.remove("active");
+  if (!deck) return;
+  
+  if (visible) {
+    playerHand = [];
+    skillCardsDealtThisRound = 0;
+    blockCardsAllowed = player.shield && !player.shield.broken;
+    renderHand();
+    deck.classList.remove("deck-inactive");
+  } else {
+    playerHand = [];
+    skillCardsDealtThisRound = 0;
+    blockCardsAllowed = player.shield && !player.shield.broken;
+    renderHand();
+    deck.classList.add("deck-inactive");
+  }
 }
 function disableHand(disabled) {
     document.querySelectorAll(".action-card").forEach(c => {
         if (disabled) {
             c.classList.add("disabled");
         } else {
+            if (c.dataset.action === "block" && (!player.shield || player.shield.broken)) return;
             c.classList.remove("disabled");
         }
     });
-    if (!disabled) {
-        if (player && player.shield && player.shield.broken) {
-            document.getElementById("cardBloqueo").classList.add("disabled");
-        }
-    }
 }
 
-function refreshBlockCard() {
-    const card = document.getElementById("cardBloqueo");
-    if (!card || !player) return;
-    if (!player.shield || player.shield.broken) {
-        card.classList.add("disabled");
-    } else {
-        card.classList.remove("disabled");
-    }
-}
 
 function updateMonsterCard(m) {
     const icons = {
@@ -795,20 +788,13 @@ function restartGame() {
     hasAncestralPact = false;
     hybridClass = null;
     player = null;
-
+    skillCardsDealtThisRound = 0;
+    blockCardsAllowed = true;
+    playerHand = [];
+    discardMode = false;
+    discardCountThisTurn = 0;
     const hand = document.getElementById("actionHand");
-    if (hand) {
-        hand.classList.remove("four-cards");
-        hand.classList.remove("expanded");
-        hand.classList.add("hand-hidden");
-    }
-
-    // Limpiar disabled y expanded-pos de todas las cartas sin pasar por disableHand
-    document.querySelectorAll(".action-card").forEach(c => {
-        c.classList.remove("disabled");
-        c.classList.remove("expanded-pos");
-        c.classList.remove("selecting");
-    });
+    if (hand) hand.innerHTML = "";
 
     document.getElementById("end-screen").classList.add("hidden");
     document.getElementById("start-screen").classList.remove("hidden");
@@ -817,12 +803,16 @@ function restartGame() {
 }
 function getRandomSword() {
   const keys = Object.keys(swords);
-  return swords[keys[Math.floor(Math.random() * keys.length)]];
+  return swords[keys[Math.floor(Math.random() * keys.length)]][player.playerClass];
 }
 
 function getRandomShield() {
   const keys = Object.keys(shields);
-  return shields[keys[Math.floor(Math.random() * keys.length)]];
+  const key = keys[Math.floor(Math.random() * keys.length)];
+  const s = shields[key][player.playerClass];
+  const newShield = new Shield(s.name, s.blockChance, s.hp);
+  newShield.playerClass = player.playerClass;
+  return newShield;
 }
 
 function getRandomBracelet() {
@@ -949,21 +939,7 @@ function toggleModal(id) {
     if (e.target === modal) modal.classList.add("hidden");
   };
 }
-function updateSkillButton() {
-    const labels = {
-        "Guerrero":   "Furia",
-        "Mago":       "Meditar",
-        "Explorador": "Fabricar"
-    };
-    const labelEl = document.querySelector("#cardHabilidad .action-card-label");
-    if (labelEl && player) {
-        if (player.playerClass === "Mago" && hybridClass) {
-            labelEl.textContent = "Dual";
-        } else {
-            labelEl.textContent = labels[player.playerClass] || "Habilidad";
-        }
-    }
-}
+
 function spawnFloatingNumber(amount, type, anchorElementId) {
   const anchor = document.getElementById(anchorElementId);
   const rect = anchor.getBoundingClientRect();
@@ -1129,11 +1105,12 @@ function applyCurse(curseId) {
 
 function acceptMerchantDeal(paymentType, curseId) {
     const combo = Math.random() < 0.5
-        ? { sword: swords.obsidiana, shield: new Shield("Diamante", 0.25, 25) }
-        : { sword: swords.diamante, shield: new Shield("Obsidiana", 0.3, 30) };
+        ? { sword: swords.exotica[player.playerClass], shield: new Shield(shields.rara[player.playerClass].name, shields.rara[player.playerClass].blockChance, shields.rara[player.playerClass].hp) }
+        : { sword: swords.rara[player.playerClass],   shield: new Shield(shields.exotica[player.playerClass].name, shields.exotica[player.playerClass].blockChance, shields.exotica[player.playerClass].hp) };
 
     player.sword = combo.sword;
     player.shield = combo.shield;
+    player.shield.playerClass = player.playerClass;
 
     if (paymentType === 'life') {
         player.hp -= 15;
@@ -1152,7 +1129,7 @@ function acceptAncestralPact(curseId) {
 
     // Equipar armas del mercader
     player.sword = merchantSword;
-    player.shield = new Shield("Escudo del Mercader", 0.35, Infinity);
+    player.shield = new Shield("❓ Defensa No Identificada", 0.35, Infinity);
     player.shield.isUnbreakable = true;
     player.shield.takeDamage = function(damage) {
         // Irrompible pero reduce bloqueo
@@ -1198,17 +1175,9 @@ function selectHybridClass(className) {
     const modal = document.getElementById("hybridModal");
     if (modal) modal.remove();
 
-    const cls = className.toLowerCase();
-    const labelNames = { "Guerrero": "Furia", "Explorador": "Fabricar" };
-    document.getElementById("imgHibrido").src = `./targetas/${cls}_habilidad.jpg`;
-    document.getElementById("labelHibrido").textContent = labelNames[className] || className;
-
-    document.getElementById("actionHand").classList.add("four-cards");
-
     updatePlayerStats();
     updateEquipment();
 
-    // Ocultar botones de loot y pasar al siguiente combate directamente
     document.getElementById("changeWeaponButton").classList.add("hidden");
     document.getElementById("keepWeaponButton").classList.add("hidden");
     document.getElementById("usePotionButton").classList.add("hidden");
@@ -1216,35 +1185,6 @@ function selectHybridClass(className) {
 
     prepareNextMonster(`¡Pacto Ancestral firmado! Ahora eres un Mago-${hybridClass}.`);
 }
-
-/*function showHybridSkillChoice() {
-    const existing = document.getElementById("hybridSkillMenu");
-    if (existing) { existing.remove(); return; }
-
-    const menu = document.createElement("div");
-    menu.id = "hybridSkillMenu";
-    menu.innerHTML = `<p><strong>¿Qué habilidad querés usar?</strong></p>`;
-
-    const btn1 = document.createElement("button");
-    btn1.innerText = "Meditación (Mago)";
-    btn1.onclick = () => { player.applySkill("Mago"); menu.remove(); updateSkillButton(); };
-
-    const btn2 = document.createElement("button");
-    btn2.innerText = hybridClass === "Guerrero" ? "⚔️ Furia de Batalla" : "🗺️ Fabricación";
-    btn2.onclick = () => { player.applySkill(hybridClass); menu.remove(); updateSkillButton(); };
-
-    const cancel = document.createElement("button");
-    cancel.innerText = "Cancelar";
-    cancel.style.backgroundColor = "#555";
-    cancel.onclick = () => menu.remove();
-
-    menu.appendChild(btn1);
-    menu.appendChild(btn2);
-    menu.appendChild(cancel);
-
-    // Insertar en el game-screen en vez de junto al botón que ya no existe
-    document.getElementById("game-screen").appendChild(menu);
-}*/
 
 function closeMerchant() {
   const modal = document.getElementById("merchantModal");
@@ -1358,96 +1298,250 @@ function testSound() {
   sound.currentTime = 0;
   sound.play();
 }
-// ---- Lógica de la mano de cartas ----
-document.addEventListener("DOMContentLoaded", function () {
-    const deck = document.getElementById("cardDeck");
+// ===================== SISTEMA DE MANO DE CARTAS =====================
 
-    deck.addEventListener("click", () => {
-        if (deck.classList.contains("deck-inactive")) return;
-        dealCards();
-    });
+// Definición de tipos de carta por clase — fácil de expandir
+const cardTypes = {
+  attack:  (cls) => ({ type: "attack",  label: "Atacar",    img: `./targetas/${cls}_ataque.jpg`    }),
+  block:   (cls) => ({ type: "block",   label: "Bloquear",  img: `./targetas/${cls}_bloqueo.jpg`   }),
+  skill:   (cls) => ({ type: "skill",   label: labelForSkill(cls), img: `./targetas/${cls}_habilidad.jpg` }),
+  hybrid:  ()    => ({ type: "hybrid",  label: labelForSkill(hybridClass), img: `./targetas/${(hybridClass||"guerrero").toLowerCase()}_habilidad.jpg` }),
+};
 
-    document.querySelectorAll(".action-card").forEach(card => {
-        card.addEventListener("click", () => handleCardClick(card));
-    });
-});
-
-function dealCards() {
-    const deck = document.getElementById("cardDeck");
-    const hand = document.getElementById("actionHand");
-    deck.classList.add("deck-inactive");
-    hand.classList.remove("hand-hidden");
-
-    const cards = ["cardAtaque", "cardBloqueo", "cardHabilidad"];
-    if (hand.classList.contains("four-cards")) cards.push("cardHibrido");
-
-    // Resetear estado visual antes de animar
-    cards.forEach(id => {
-        const c = document.getElementById(id);
-        c.classList.remove("in-play", "returning", "selecting");
-    });
-
-    // Animar una por una con delay
-    cards.forEach((id, i) => {
-        setTimeout(() => {
-            const c = document.getElementById(id);
-            c.classList.add("in-play");
-        }, i * 150);
-    });
+function labelForSkill(cls) {
+  const labels = { "Guerrero": "Furia", "Mago": "Meditar", "Explorador": "Fabricar" };
+  return labels[cls] || "Habilidad";
 }
 
-function returnCards() {
-    const deck = document.getElementById("cardDeck");
-    const hand = document.getElementById("actionHand");
+// Mano actual
+let playerHand = [];
 
-    const cards = ["cardAtaque", "cardBloqueo", "cardHabilidad", "cardHibrido"];
+function getAvailableCardTypes() {
+  const cls = player.playerClass.toLowerCase();
+  const types = ["attack", "block", "skill"];
+  if (hasAncestralPact && hybridClass) types.push("hybrid");
+  return types;
+}
 
-    cards.forEach((id, i) => {
-        setTimeout(() => {
-            const c = document.getElementById(id);
-            c.classList.remove("in-play");
-            c.classList.add("returning");
-        }, i * 100);
-    });
+// Contadores de carta por ronda
+let skillCardsDealtThisRound = 0;
+let blockCardsAllowed = true;
 
-    // Después de que todas volvieron, ocultar la mano y activar el mazo
+function drawRandomCard() {
+  const cls = player.playerClass.toLowerCase();
+  const types = getAvailableCardTypes().filter(type => {
+    if (type === "skill" || type === "hybrid") {
+      return skillCardsDealtThisRound < player.skillUses;
+    }
+    if (type === "block") {
+      return blockCardsAllowed;
+    }
+    return true;
+  });
+
+  // Si no quedan tipos válidos solo saldrán ataques
+  if (types.length === 0) return cardTypes.attack(cls);
+
+  const type = types[Math.floor(Math.random() * types.length)];
+
+  if (type === "skill" || type === "hybrid") {
+    skillCardsDealtThisRound++;
+  }
+
+  return cardTypes[type](cls);
+}
+
+function drawCards(amount) {
+  for (let i = 0; i < amount; i++) {
+    if (playerHand.length < 5) {
+      playerHand.push(drawRandomCard());
+    }
+  }
+  renderHand();
+  updateDeckState();
+}
+
+function renderHand() {
+  const hand = document.getElementById("actionHand");
+  hand.innerHTML = "";
+
+  playerHand.forEach((cardData, index) => {
+    const card = document.createElement("div");
+    card.classList.add("action-card");
+    if (cardData.type === "hybrid") card.classList.add("hybrid-card");
+    card.dataset.action = cardData.type;
+    card.dataset.index = index;
+
+    card.innerHTML = `
+      <img class="action-card-img" src="${cardData.img}" alt="${cardData.label}">
+      <div class="action-card-label">${cardData.label}</div>
+    `;
+
+    // Deshabilitar bloqueo si escudo roto
+    if (cardData.type === "block" && player.shield && player.shield.broken) {
+      card.classList.add("disabled");
+    }
+
+    card.addEventListener("click", () => handleCardClick(card));
+    card.addEventListener("contextmenu", (e) => e.preventDefault());
+
+    hand.appendChild(card);
+
+    // Animar entrada
+    setTimeout(() => card.classList.add("in-play"), index * 120);
+  });
+}
+
+function discardCard(cardElement, index) {
+  return new Promise(resolve => {
+    cardElement.classList.remove("in-play");
+    cardElement.classList.add("discarding");
     setTimeout(() => {
-        cards.forEach(id => {
-            document.getElementById(id).classList.remove("returning");
+      playerHand.splice(index, 1);
+      renderHand();
+      if (discardMode) {
+        document.querySelectorAll(".action-card").forEach(c => {
+          c.classList.add("discard-mode");
         });
-        hand.classList.add("hand-hidden");
-        deck.classList.remove("deck-inactive");
-    }, cards.length * 100 + 450);
+      }
+      updateDeckState();
+      resolve();
+    }, 400);
+  });
 }
 
-function handleCardClick(card) {
-    if (card.classList.contains("disabled")) return;
+function updateDeckState() {
+  const deck = document.getElementById("cardDeck");
+  if (!deck) return;
+  if (playerHand.length <= 3) {
+    deck.classList.remove("deck-inactive");
+  } else {
+    deck.classList.add("deck-inactive");
+  }
+}
 
-    const action = card.dataset.action;
-    card.classList.add("selecting");
+function handleDeckClick() {
+  const deck = document.getElementById("cardDeck");
+  if (deck.classList.contains("deck-inactive")) return;
+
+  if (playerHand.length === 0) {
+    // Ronda nueva — robar 5
+    drawCards(5);
+  } else if (playerHand.length <= 3) {
+    // Gastar turno para robar 2
     disableHand(true);
-
+    drawCards(2);
     setTimeout(() => {
-        card.classList.remove("selecting");
-        if (action === "attack") {
-            playerAttack();
-        } else if (action === "block") {
-            playerBlock();
-        } else if (action === "skill") {
-            player.applySkill(player.playerClass);
-            disableHand(false);
-            if (player.shield && player.shield.broken) {
-                document.getElementById("cardBloqueo").classList.add("disabled");
-            }
-        } else if (action === "hybrid") {
-            const el = document.getElementById("playerAvatar");
-            el.classList.add("avatar-hybrid-flash");
-            setTimeout(() => el.classList.remove("avatar-hybrid-flash"), 800);
-            player.applySkill(hybridClass);
-            disableHand(false);
-            if (player.shield && player.shield.broken) {
-                document.getElementById("cardBloqueo").classList.add("disabled");
-            }
-        }
-    }, 380);
+      monsterAttack();
+      updateStats();
+      disableHand(false);
+      refreshBlockCards();
+    }, 900);
+  }
 }
+function getDiscardCost() {
+  if (discardCountThisTurn < 2) return 1;
+  if (discardCountThisTurn === 2) return 3;
+  return 5;
+}
+
+function toggleDiscardMode() {
+  if (playerHand.length === 0) return;
+  discardMode = !discardMode;
+
+  const btn = document.getElementById("discardBtn");
+  btn.classList.toggle("active", discardMode);
+
+  document.querySelectorAll(".action-card").forEach(c => {
+    if (discardMode) {
+      c.classList.add("discard-mode");
+    } else {
+      c.classList.remove("discard-mode");
+    }
+  });
+}
+
+function handleDiscardClick(card, index) {
+  const cost = getDiscardCost();
+
+  player.hp = Math.max(player.hp - cost, 1);
+  spawnFloatingNumber(cost, "damage", "playerAvatar");
+  discardCountThisTurn++;
+
+  discardCard(card, index).then(() => {
+    updateStats();
+    refreshBlockCards();
+    if (playerHand.length === 0) {
+      discardMode = false;
+      document.getElementById("discardBtn").classList.remove("active");
+    }
+  });
+}
+function handleCardClick(card) {
+  if (card.classList.contains("disabled") && !discardMode) return;
+
+  const index = parseInt(card.dataset.index);
+
+  if (discardMode) {
+    handleDiscardClick(card, index);
+    return;
+  }
+
+  if (card.classList.contains("disabled")) return;
+
+  const action = card.dataset.action;
+  card.classList.add("selecting");
+  disableHand(true);
+
+  setTimeout(async () => {
+    card.classList.remove("selecting");
+    await discardCard(card, index);
+
+    if (action === "attack") {
+      playerAttack();
+    } else if (action === "block") {
+      playerBlock();
+    } else if (action === "skill") {
+      player.applySkill(player.playerClass);
+      disableHand(false);
+      refreshBlockCards();
+    } else if (action === "hybrid") {
+      const el = document.getElementById("playerAvatar");
+      el.classList.add("avatar-hybrid-flash");
+      setTimeout(() => el.classList.remove("avatar-hybrid-flash"), 800);
+      player.applySkill(hybridClass);
+      disableHand(false);
+      refreshBlockCards();
+    }
+  }, 380);
+}
+
+function refreshBlockCards() {
+  document.querySelectorAll(".action-card").forEach(c => {
+    if (c.dataset.action === "block") {
+      if (player && player.shield && player.shield.broken) {
+        c.classList.add("disabled");
+      } else {
+        c.classList.remove("disabled");
+      }
+    }
+  });
+}
+
+function disableHand(disabled) {
+  document.querySelectorAll(".action-card").forEach(c => {
+    if (disabled) {
+      c.classList.add("disabled");
+    } else {
+      c.classList.remove("disabled");
+    }
+  });
+  if (!disabled) refreshBlockCards();
+}
+
+document.addEventListener("DOMContentLoaded", function () {
+  const deck = document.getElementById("cardDeck");
+  if (deck) deck.addEventListener("click", handleDeckClick);
+  const discardBtn = document.getElementById("discardBtn");
+  if (discardBtn) discardBtn.addEventListener("click", toggleDiscardMode);
+});

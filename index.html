@@ -124,37 +124,14 @@
 
         <div id="message"></div>
                         <!-- Mazo -->
-            <div id="cardDeck" class="card-deck">
-                <img src="./targetas/mazo.jpg" alt="Mazo" class="deck-img">
+            <div id="deckWrapper">
+                <div id="cardDeck">
+                    <img src="./targetas/mazo.jpg" alt="Mazo" class="deck-img">
+                </div>
+                <button id="discardBtn" class="discard-btn">✕</button>
             </div>
-
             <!-- Mano de cartas -->
-            <div id="actionHand" class="action-hand">
-                <div class="action-card" id="cardAtaque" data-action="attack">
-                    <div class="action-card-inner">
-                        <img class="action-card-img" id="imgAtaque" src="" alt="Atacar">
-                        <div class="action-card-label">Atacar</div>
-                    </div>
-                </div>
-                <div class="action-card" id="cardBloqueo" data-action="block">
-                    <div class="action-card-inner">
-                        <img class="action-card-img" id="imgBloqueo" src="" alt="Bloquear">
-                        <div class="action-card-label">Bloquear</div>
-                    </div>
-                </div>
-                <div class="action-card" id="cardHabilidad" data-action="skill">
-                    <div class="action-card-inner">
-                        <img class="action-card-img" id="imgHabilidad" src="" alt="Habilidad">
-                        <div class="action-card-label">Habilidad</div>
-                    </div>
-                </div>
-                <div class="action-card hand-hidden" id="cardHibrido" data-action="hybrid">
-                    <div class="action-card-inner">
-                        <img class="action-card-img" id="imgHibrido" src="" alt="Habilidad Híbrida">
-                        <div class="action-card-label" id="labelHibrido">Híbrido</div>
-                    </div>
-                </div>
-            </div>
+            <div id="actionHand" class="action-hand"></div>
         <button id="changeWeaponButton" class="hidden" onclick="changeWeapon()">Cambiar Conjunto</button>
         <button id="keepWeaponButton" class="hidden" onclick="keepWeapon()">Mantener Conjunto</button>
         <button id="usePotionButton" class="hidden" onclick="usePotion()">Usar Poción</button>
@@ -162,10 +139,10 @@
         <!-- Cuadro de estadísticas del jugador -->
         <div id="playerStats" class="player-stats">
             <h3>Estadísticas del Jugador</h3>
-            <p>Espada: <span id="playerSword"></span></p>
-            <p>Daño de Espada: <span id="playerSwordDamage"></span></p>
-            <p>Escudo: <span id="playerShield"></span></p>
-            <p>Vida del Escudo: <span id="playerShieldHp"></span></p>
+            <p>Ataque: <span id="playerSword"></span></p>
+            <p>Daño: <span id="playerSwordDamage"></span></p>
+            <p>Defensa: <span id="playerShield"></span></p>
+            <p>resistencia: <span id="playerShieldHp"></span></p>
             <p>Probabilidad de Bloqueo: <span id="playerShieldBlock"></span></p>
             <p>Habilidad Restante: <span id="skillUses"></span></p>
             <p>Brazalete: <span id="playerBracelet"></span></p>
