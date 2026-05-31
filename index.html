@@ -99,44 +99,33 @@
     <div id="game-screen" class="hidden">
         <h2>Jugador: <span id="playerName"></span> (<span id="playerClass"></span>)</h2>
             <div id="avatars">
-                <div class="battle-card" id="playerAvatar">
-                    <div class="card-bg" id="playerCardBg"></div>
-                    <div class="card-overlay"></div>
-                    <div class="card-content">
-                        <div class="card-icon" id="playerCardIcon"></div>
-                        <h3 class="card-title" id="playerCardName"></h3>
-                        <p class="card-desc" id="playerCardClassLabel"></p>
+                <div class="avatar-wrapper">
+                    <div class="battle-card" id="playerAvatar">
+                        <div class="card-bg" id="playerCardBg"></div>
+                        <div class="card-overlay"></div>
+                        <div class="card-content">
+                        </div>
                     </div>
+                    <div class="hp-display" id="playerHpDisplay">❤️ 50/50</div>
                 </div>
-                <div class="battle-card" id="monsterAvatar">
-                    <div class="card-bg" id="monsterCardBg"></div>
-                    <div class="card-overlay"></div>
-                    <div class="card-content">
-                        <div class="card-icon" id="monsterCardIcon"></div>
-                        <h3 class="card-title" id="monsterCardName">Monstruo</h3>
+                <div class="avatar-wrapper">
+                    <div class="battle-card" id="monsterAvatar">
+                        <div class="card-bg" id="monsterCardBg"></div>
+                        <div class="card-overlay"></div>
+                        <div class="card-content">
+                            <div class="card-icon" id="monsterCardIcon"></div>
+                            <h3 class="card-title" id="monsterCardName">Monstruo</h3>
+                        </div>
                     </div>
+                    <div class="hp-display" id="monsterHpDisplay">❤️ 0/0</div>
                 </div>
             </div>
-        <div id="stats">
-            <div>
-                Vida del Jugador:
-                <div id="playerHealthBar" class="health-bar">
-                    <div id="playerHealthFill" class="health-fill"></div>
-                </div>
-            </div>
-            <div>
-                Vida del Monstruo:
-                <div id="monsterHealthBar" class="health-bar">
-                    <div id="monsterHealthFill" class="health-fill"></div>
-                </div>
-            </div>
-        </div>
-        <div id="weapon-info">Espada actual: <span id="currentWeapon"></span></div>
-        <div id="shield-info">Escudo actual: <span id="currentShield"></span></div>
+        
+
         <div id="message"></div>
                         <!-- Mazo -->
             <div id="cardDeck" class="card-deck">
-                <img src="./images/mazo.jpg" alt="Mazo" class="deck-img">
+                <img src="./targetas/mazo.jpg" alt="Mazo" class="deck-img">
             </div>
 
             <!-- Mano de cartas -->

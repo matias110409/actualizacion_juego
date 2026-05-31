@@ -135,17 +135,21 @@ applySkill(className) {
     }
     switch (className) {
         case "Guerrero":
+            triggerSkillAnim("Guerrero");
             this.skillActive = true;
             this.damageReductionActive = true;
             document.getElementById("message").innerText += `\n¡Furia de Batalla activada! Daño x2 y reducción de daño 50%.`;
             break;
         case "Mago":
+            triggerSkillAnim("Mago");
+            spawnHealParticles("playerAvatar");
             this.recoverHealth(15);
             this.shield.blockChance += 0.05;
             document.getElementById("message").innerText += `\n¡Meditación activada! +15 vida y +5% bloqueo.`;
             updateStats();
             break;
         case "Explorador":
+            triggerSkillAnim("Explorador");
             if (this.shield.isUnbreakable) {
                 this.shield.broken = false;
                 this.shield.blockChance = Math.max(this.shield.blockChance, 0.10);
@@ -233,11 +237,13 @@ const potions = {
 const specialAbilities = {
     
   mago: (player, monster) => {
-      if (Math.random() < 0.3) {
-          monster.hp = Math.min(monster.hp + 7, monster.maxHp);
-          document.getElementById("message").innerText += `\n¡${monster.name} ha recuperado 5 puntos de salud!`;
-      }
-  },
+    if (Math.random() < 0.3) {
+        monster.hp = Math.min(monster.hp + 7, monster.maxHp);
+        spawnFloatingNumber(7, "heal", "monsterAvatar");
+        spawnRegenWaves("monsterAvatar");
+        document.getElementById("message").innerText += `\n¡${monster.name} ha recuperado 5 puntos de salud!`;
+    }
+    },
   guerrero: (player, monster) => {
       if (Math.random() < 0.20) {
           document.getElementById("message").innerText += `\n¡${monster.name} ha bloqueado el ataque de ${player.name} e inflige daño!`;
@@ -265,6 +271,7 @@ const specialAbilities = {
                 if (Math.random() < 0.3) {
                     monster.hp = Math.min(monster.hp + 7, monster.maxHp);
                     spawnFloatingNumber(7, "heal", "monsterAvatar");
+                    spawnRegenWaves("monsterAvatar");
                     document.getElementById("message").innerText += `\n¡El Jefe Final se regenera!`;
                 }
             } else if (roll < 0.66) {
@@ -339,6 +346,7 @@ function startGame() {
   updateMonsterCard(monster);
   updateActionCards();
   setHandVisible(true);
+  initIdleAnims();
 }
 
 function generateMonster(index) {
@@ -356,70 +364,161 @@ function generateMonster(index) {
   const randomMonster = monsterTypes[Math.floor(Math.random() * monsterTypes.length)];
   return new Monster(randomMonster.name, randomMonster.hp, randomMonster.attack, randomMonster.avatar, randomMonster.ability);
 }
+// ===================== ANIMACIONES DE AVATARS =====================
+
+function avatarAnim(elementId, className, duration = 500) {
+  const el = document.getElementById(elementId);
+  if (!el) return;
+  el.classList.remove("avatar-idle", "avatar-danger");
+  el.classList.add(className);
+  setTimeout(() => {
+    el.classList.remove(className);
+    restoreIdleAnim(elementId);
+  }, duration);
+}
+
+function restoreIdleAnim(elementId) {
+  const el = document.getElementById(elementId);
+  if (!el) return;
+  if (elementId === "playerAvatar" && player && player.hp < 20) {
+    el.classList.add("avatar-danger");
+  } else {
+    el.classList.add("avatar-idle");
+  }
+}
+
+function spawnHealParticles(elementId) {
+  const anchor = document.getElementById(elementId);
+  const rect = anchor.getBoundingClientRect();
+  const particles = ["✨", "💛", "🌟", "⭐"];
+  for (let i = 0; i < 6; i++) {
+    setTimeout(() => {
+      const el = document.createElement("div");
+      el.classList.add("heal-particle");
+      el.innerText = particles[Math.floor(Math.random() * particles.length)];
+      el.style.left = `${rect.left + Math.random() * rect.width}px`;
+      el.style.top = `${rect.top + window.scrollY + rect.height * 0.5}px`;
+      el.style.position = "absolute";
+      document.body.appendChild(el);
+      setTimeout(() => el.remove(), 1000);
+    }, i * 80);
+  }
+}
+
+function spawnShieldCrack(elementId) {
+  const anchor = document.getElementById(elementId);
+  const crack = document.createElement("div");
+  crack.classList.add("shield-crack");
+  anchor.style.position = "relative";
+  anchor.appendChild(crack);
+  setTimeout(() => crack.remove(), 700);
+}
+
+function spawnRegenWaves(elementId) {
+  for (let i = 0; i < 3; i++) {
+    setTimeout(() => {
+      const anchor = document.getElementById(elementId);
+      const wave = document.createElement("div");
+      wave.classList.add("regen-wave");
+      anchor.appendChild(wave);
+      setTimeout(() => wave.remove(), 900);
+    }, i * 250);
+  }
+}
+
+function triggerMonsterAbilityAnim(monsterName) {
+  const el = document.getElementById("monsterAvatar");
+  const classMap = {
+    "Monstruo Mago":       "mago",
+    "Monstruo Guerrero":   "guerrero",
+    "Monstruo Explorador": "explorador",
+    "Jefe Final":          "boss"
+  };
+  const cls = classMap[monsterName] || "boss";
+  el.classList.add("avatar-monster-ability", cls);
+  setTimeout(() => el.classList.remove("avatar-monster-ability", cls), 700);
+}
+
+function triggerSkillAnim(className) {
+  const el = document.getElementById("playerAvatar");
+  el.classList.add("avatar-skill-flash", className.toLowerCase());
+  setTimeout(() => el.classList.remove("avatar-skill-flash", className.toLowerCase()), 700);
+}
+
+function initIdleAnims() {
+  document.getElementById("playerAvatar").classList.add("avatar-idle");
+  document.getElementById("monsterAvatar").classList.add("avatar-idle");
+}
 function playerAttack() {
-    const damage = player.attack();
-    monster.hp -= damage;
+    avatarAnim("playerAvatar", "avatar-attack-player", 450);
 
-    if (player.lastAttackWasCritical) {
-        spawnFloatingNumber(damage, "critical", "monsterAvatar");
-    } else {
-        spawnFloatingNumber(damage, "damage", "monsterAvatar");
-    }
+    setTimeout(() => {
+        const damage = player.attack();
+        monster.hp -= damage;
 
-    addAnimation(document.getElementById('playerHealthFill'), 'attack-animation');
-    updateStats();
-
-    if (monster.hp <= 0) {
-        monstersDefeated++;
-        let message = `¡Has derrotado al ${monster.name}!`;
-
-        if (monstersDefeated === 10) {
-            endGame(true);
-            return;
-        }
-
-        currentWeaponDrop = {
-            sword: getRandomSword(),
-            shield: getRandomShield(),
-            bracelet: getRandomBracelet(),
-            potion: getRandomPotion(),
-        };
-
-        setHandVisible(false);
-        disableHand(false); // limpiar cualquier disable pendiente
-
-        if (hasAncestralPact) {
-            message += `\nEl monstruo dejó caer una poción de ${currentWeaponDrop.potion.name}.`;
-            document.getElementById("keepWeaponButton").classList.add("hidden");
-            document.getElementById("changeWeaponButton").classList.add("hidden");
-            document.getElementById("usePotionButton").classList.remove("hidden");
-            document.getElementById("ancestralLootButton").classList.remove("hidden");
+        if (player.lastAttackWasCritical) {
+            spawnFloatingNumber(damage, "critical", "monsterAvatar");
+            avatarAnim("monsterAvatar", "avatar-critical", 500);
         } else {
-            message += `\nEl monstruo dejó caer una espada de ${currentWeaponDrop.sword.name}, un escudo de ${currentWeaponDrop.shield.name}, un brazalete de ${currentWeaponDrop.bracelet.name} y una poción de ${currentWeaponDrop.potion.name}.`;
-            document.getElementById("changeWeaponButton").classList.remove("hidden");
-            document.getElementById("keepWeaponButton").classList.remove("hidden");
-            document.getElementById("usePotionButton").classList.remove("hidden");
+            spawnFloatingNumber(damage, "damage", "monsterAvatar");
+            avatarAnim("monsterAvatar", "avatar-damage", 400);
         }
 
-        updateStats(message);
+        updateStats();
 
-        if (!merchantAppeared && [1,3,5,7].includes(monstersDefeated)) {
-            if (Math.random() < 0.20) {
-                setTimeout(() => showMerchant(), 800);
+        if (monster.hp <= 0) {
+            monstersDefeated++;
+            let message = `¡Has derrotado al ${monster.name}!`;
+
+            if (monstersDefeated === 10) {
+                avatarAnim("playerAvatar", "avatar-victory", 1200);
+                setTimeout(() => endGame(true), 1200);
+                return;
             }
-        }
 
-    } else {
-        disableHand(true);
-        setTimeout(() => {
-            monsterAttack();
-            updateStats();
+            currentWeaponDrop = {
+                sword: getRandomSword(),
+                shield: getRandomShield(),
+                bracelet: getRandomBracelet(),
+                potion: getRandomPotion(),
+            };
+
+            setHandVisible(false);
             disableHand(false);
-            if (player.shield && player.shield.broken) {
-                document.getElementById("cardBloqueo").classList.add("disabled");
+
+            if (hasAncestralPact) {
+                message += `\nEl monstruo dejó caer una poción de ${currentWeaponDrop.potion.name}.`;
+                document.getElementById("keepWeaponButton").classList.add("hidden");
+                document.getElementById("changeWeaponButton").classList.add("hidden");
+                document.getElementById("usePotionButton").classList.remove("hidden");
+                document.getElementById("ancestralLootButton").classList.remove("hidden");
+            } else {
+                message += `\nEl monstruo dejó caer una espada de ${currentWeaponDrop.sword.name}, un escudo de ${currentWeaponDrop.shield.name}, un brazalete de ${currentWeaponDrop.bracelet.name} y una poción de ${currentWeaponDrop.potion.name}.`;
+                document.getElementById("changeWeaponButton").classList.remove("hidden");
+                document.getElementById("keepWeaponButton").classList.remove("hidden");
+                document.getElementById("usePotionButton").classList.remove("hidden");
             }
-        }, 900);
-    }
+
+            updateStats(message);
+
+            if (!merchantAppeared && [1,3,5,7].includes(monstersDefeated)) {
+                if (Math.random() < 0.20) {
+                    setTimeout(() => showMerchant(), 800);
+                }
+            }
+
+        } else {
+            disableHand(true);
+            setTimeout(() => {
+                monsterAttack();
+                updateStats();
+                disableHand(false);
+                if (player.shield && player.shield.broken) {
+                    document.getElementById("cardBloqueo").classList.add("disabled");
+                }
+            }, 900);
+        }
+    }, 200);
 }
 function playerBlock() {
     disableHand(true);
@@ -429,18 +528,23 @@ function playerBlock() {
 
     if (blocked) {
         blockSound.play();
+        document.getElementById("playerAvatar").classList.add("avatar-block-ray");
+        setTimeout(() => document.getElementById("playerAvatar").classList.remove("avatar-block-ray"), 600);
+
         if (player.curseName === "E") {
             player.hp = Math.max(player.hp - 5, 1);
             spawnFloatingNumber(5, "damage", "playerAvatar");
+            avatarAnim("playerAvatar", "avatar-damage", 400);
             updateStats(`${player.name} bloqueó pero la maldición le costó 5 vida.`);
         } else {
             player.recoverHealth(15);
             spawnFloatingNumber(15, "heal", "playerAvatar");
+            spawnHealParticles("playerAvatar");
             updateStats(`${player.name} bloqueó el ataque completamente.`);
         }
+
         spawnFloatingNumber(0, "block", "playerAvatar");
         if (player.hp <= 0) { endGame(false); return; }
-        addAnimation(document.getElementById('playerHealthFill'), 'block-animation');
         setTimeout(() => disableHand(false), 400);
     } else {
         let damage = Math.floor(Math.random() * monster.attack) + 1;
@@ -450,43 +554,52 @@ function playerBlock() {
         }
         player.hp -= damage;
         spawnFloatingNumber(damage, "damage", "playerAvatar");
+        avatarAnim("playerAvatar", "avatar-damage", 400);
         player.takeShieldDamage(damage);
-        if (player.shield && player.shield.hp === 0 && !player.shield.isUnbreakable) shieldBreakSound.play();
+        if (player.shield && player.shield.hp === 0 && !player.shield.isUnbreakable) {
+            shieldBreakSound.play();
+            spawnShieldCrack("playerAvatar");
+        }
         player.recoverHealth(5);
         spawnFloatingNumber(5, "heal", "playerAvatar");
         updateStats(`No logró bloquear.`);
         if (player.hp <= 0) { endGame(false); return; }
-        addAnimation(document.getElementById('playerHealthFill'), 'block-animation');
         setTimeout(() => disableHand(false), 400);
     }
+    restoreIdleAnim("playerAvatar");
 }
 
 function monsterAttack() {
     const dodged = player.dodge();
 
     if (dodged) {
-        
-        spawnFloatingNumber(0, "dodge", "playerAvatar");
-        updateStats(`${player.name} esquivó el ataque.`);
+        avatarAnim("monsterAvatar", "avatar-attack-monster", 450);
+        setTimeout(() => {
+            avatarAnim("playerAvatar", "avatar-dodge", 450);
+            spawnFloatingNumber(0, "dodge", "playerAvatar");
+            updateStats(`${player.name} esquivó el ataque.`);
+        }, 200);
     } else {
-    
-        let damage = Math.floor(Math.random() * monster.attack) + 1;
+        avatarAnim("monsterAvatar", "avatar-attack-monster", 450);
+        setTimeout(() => {
+            let damage = Math.floor(Math.random() * monster.attack) + 1;
+            if (player.damageReductionActive) {
+                damage = Math.floor(damage * 0.5);
+                player.damageReductionActive = false;
+            }
+            player.hp -= damage;
+            spawnFloatingNumber(damage, "damage", "playerAvatar");
+            avatarAnim("playerAvatar", "avatar-damage", 400);
 
-        // 👇 reducción de daño del Guerrero
-        if (player.damageReductionActive) {
-            damage = Math.floor(damage * 0.5);
-            player.damageReductionActive = false;
-        }
+            if (monster.ability) {
+                triggerMonsterAbilityAnim(monster.name);
+                monster.ability(player, monster);
+            }
 
-        player.hp -= damage;
-        spawnFloatingNumber(damage, "damage", "playerAvatar");
-
-        if (monster.ability) {
-            monster.ability(player, monster);
-        }
-
-        if (player.hp <= 0) { endGame(false); return; }
-        updateStats(`El ${monster.name} atacó causando ${damage} de daño.`);
+            if (player.hp <= 0) { endGame(false); return; }
+            updateStats(`El ${monster.name} atacó causando ${damage} de daño.`);
+            restoreIdleAnim("playerAvatar");
+        }, 200);
     }
 }
 function changeWeapon() {
@@ -499,8 +612,7 @@ function changeWeapon() {
     document.getElementById("changeWeaponButton").classList.add("hidden");
     document.getElementById("keepWeaponButton").classList.add("hidden");
     document.getElementById("usePotionButton").classList.add("hidden");
-    addAnimation(document.getElementById('currentWeapon'), 'weapon-change');
-    addAnimation(document.getElementById('currentShield'), 'weapon-change');
+
     updatePlayerStats();
     prepareNextMonster(`${player.name} ahora usa la espada de ${player.sword.name} y el escudo de ${player.shield.name}.`);
 }
@@ -540,17 +652,28 @@ function prepareNextMonster(message) {
 }
 
 function updateEquipment() {
-  document.getElementById("currentWeapon").innerText = player.sword.name;
-  document.getElementById("currentShield").innerText = player.shield ? player.shield.name : "Sin Escudo";
 }
 
 function updateStats(message = "") {
-  const playerHealthPercent = Math.max((player.hp / 50) * 100, 0);
-  const monsterHealthPercent = Math.max((monster.hp / monster.maxHp) * 100, 0);
-  document.getElementById("playerHealthFill").style.width = `${playerHealthPercent}%`;
-  document.getElementById("monsterHealthFill").style.width = `${monsterHealthPercent}%`;
+    const playerEl = document.getElementById("playerHpDisplay");
+    const monsterEl = document.getElementById("monsterHpDisplay");
 
-  document.getElementById("message").innerText = message;
+    const playerHp = Math.max(player.hp, 0);
+    const monsterHp = Math.max(monster.hp, 0);
+
+    playerEl.textContent = `❤️ ${playerHp}/50`;
+    monsterEl.textContent = `❤️ ${monsterHp}/${monster.maxHp}`;
+
+    playerEl.classList.toggle("danger", playerHp < 20);
+    monsterEl.classList.toggle("danger", monsterHp < 20);
+    document.getElementById("message").innerText = message;
+    if (player && player.hp < 20) {
+    const el = document.getElementById("playerAvatar");
+    if (!el.classList.contains("avatar-danger")) {
+        el.classList.remove("avatar-idle");
+        el.classList.add("avatar-danger");
+    }
+}
 }
 
 function updatePlayerStats() {
@@ -581,9 +704,7 @@ function updatePlayerCard() {
         "Explorador": '<i class="fa-solid fa-binoculars"></i>'
     };
     document.getElementById("playerCardBg").style.backgroundImage = `url('${classBgs[player.playerClass]}')`;
-    document.getElementById("playerCardIcon").innerHTML = classIcons[player.playerClass] || "";
-    document.getElementById("playerCardName").innerText = player.name;
-    document.getElementById("playerCardClassLabel").innerText = player.playerClass;
+
 }
 function updateActionCards() {
     if (!player) return;
@@ -1319,6 +1440,9 @@ function handleCardClick(card) {
                 document.getElementById("cardBloqueo").classList.add("disabled");
             }
         } else if (action === "hybrid") {
+            const el = document.getElementById("playerAvatar");
+            el.classList.add("avatar-hybrid-flash");
+            setTimeout(() => el.classList.remove("avatar-hybrid-flash"), 800);
             player.applySkill(hybridClass);
             disableHand(false);
             if (player.shield && player.shield.broken) {

@@ -204,6 +204,7 @@ body {
   display: flex;
   justify-content: space-around;
   margin-bottom: 20px;
+  margin-top: 40px;
 }
 
 
@@ -249,26 +250,6 @@ button:active {
 button:disabled {
   background-color: #555;
   cursor: not-allowed;
-}
-
-.health-bar {
-  width: 80%;
-  height: 20px;
-  background-color: #333;
-  border-radius: 10px;
-  overflow: hidden;
-  margin: 10px auto;
-  position: relative;
-}
-
-.health-fill {
-  height: 100%;
-  background-color: #e74c3c;
-  transition: width 0.3s ease-in-out;
-}
-
-#monsterHealthFill {
-  background-color: #3498db;
 }
 
 #message {
@@ -965,6 +946,9 @@ body {
   overflow: hidden;
   border: 2px solid #444;
   flex-shrink: 0;
+  filter: brightness(0.9) blur(0.5px);
+  transform: scale(0.92);
+  transition: filter 0.3s ease, transform 0.3s ease;
 }
 
 #playerAvatar {
@@ -1010,8 +994,8 @@ body {
   position: fixed;
   left: 110px;
   bottom: 160px;
-  width: 80px;
-  height: 120px;
+  width: 140px;
+  height: 220px;
   border-radius: 8px;
   overflow: hidden;
   cursor: pointer;
@@ -1058,8 +1042,8 @@ body {
 
 .action-card {
   position: relative;
-  width: 120px;
-  height: 170px;
+  width: 140px;
+  height: 220px;
   border-radius: 10px;
   overflow: hidden;
   cursor: pointer;
@@ -1103,7 +1087,7 @@ body {
 .action-card-img {
   width: 100%;
   height: 100%;
-  object-fit: cover;
+  object-fit: contain;
   display: block;
   pointer-events: none;
 }
@@ -1142,4 +1126,285 @@ body {
   display: block;
   border-color: rgba(142, 68, 173, 0.6);
   box-shadow: 0 8px 24px rgba(142, 68, 173, 0.5);
+}
+@import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
+
+.avatar-wrapper {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+}
+
+.hp-display {
+    font-family: 'Press Start 2P', monospace;
+    font-size: 15px;
+    color: #2ecc71;
+    text-shadow: 0 0 8px rgba(46, 204, 113, 0.6);
+    transition: color 0.3s ease;
+}
+
+.hp-display.danger {
+    color: #e74c3c;
+    text-shadow: 0 0 8px rgba(231, 76, 60, 0.7);
+    animation: hpPulse 1s infinite alternate;
+}
+
+@keyframes hpPulse {
+    0%   { opacity: 1; }
+    100% { opacity: 0.5; }
+}
+/* ===================== ANIMACIONES DE AVATARS ===================== */
+
+/* Idle - respiración */
+@keyframes idleBreath {
+  0%   { transform: scale(1); }
+  50%  { transform: scale(1.015); }
+  100% { transform: scale(1); }
+}
+
+.avatar-idle {
+  animation: idleBreath 3s ease-in-out infinite;
+}
+
+/* Atacar - lanzarse hacia el otro */
+@keyframes playerAttackAnim {
+  0%   { transform: translateX(0); }
+  40%  { transform: translateX(180px); }
+  100% { transform: translateX(0); }
+}
+
+@keyframes monsterAttackAnim {
+  0%   { transform: translateX(0); }
+  40%  { transform: translateX(-180px); }
+  100% { transform: translateX(0); }
+}
+
+.avatar-attack-player {
+  animation: playerAttackAnim 0.45s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
+}
+
+.avatar-attack-monster {
+  animation: monsterAttackAnim 0.45s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
+}
+
+/* Recibir daño - vibración */
+@keyframes shakeDamage {
+  0%   { transform: translateX(0); }
+  15%  { transform: translateX(-8px); }
+  30%  { transform: translateX(8px); }
+  45%  { transform: translateX(-6px); }
+  60%  { transform: translateX(6px); }
+  75%  { transform: translateX(-3px); }
+  100% { transform: translateX(0); }
+}
+
+.avatar-damage {
+  animation: shakeDamage 0.4s ease forwards;
+}
+
+/* Golpe crítico - sacudida fuerte + flash rojo */
+@keyframes shakeCritical {
+  0%   { transform: translateX(0) rotate(0deg); }
+  15%  { transform: translateX(-12px) rotate(-3deg); }
+  30%  { transform: translateX(12px) rotate(3deg); }
+  45%  { transform: translateX(-10px) rotate(-2deg); }
+  60%  { transform: translateX(10px) rotate(2deg); }
+  75%  { transform: translateX(-5px); }
+  100% { transform: translateX(0) rotate(0deg); }
+}
+
+@keyframes flashRed {
+  0%   { filter: brightness(0.6) blur(1px); }
+  25%  { filter: brightness(1) blur(0px) sepia(1) saturate(5) hue-rotate(-20deg); }
+  50%  { filter: brightness(0.6) blur(1px); }
+  75%  { filter: brightness(1) blur(0px) sepia(1) saturate(5) hue-rotate(-20deg); }
+  100% { filter: brightness(0.6) blur(1px); }
+}
+
+.avatar-critical {
+  animation: shakeCritical 0.5s ease forwards, flashRed 0.5s ease forwards;
+}
+
+/* Bloquear exitoso - rayo diagonal */
+.avatar-block-ray::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    135deg,
+    transparent 30%,
+    rgba(255, 255, 255, 0.7) 50%,
+    transparent 70%
+  );
+  animation: blockRay 0.5s ease forwards;
+  z-index: 10;
+  border-radius: 10px;
+  pointer-events: none;
+}
+
+@keyframes blockRay {
+  0%   { opacity: 0; transform: translateX(-100%); }
+  40%  { opacity: 1; }
+  100% { opacity: 0; transform: translateX(100%); }
+}
+
+/* Esquivar - transparencia + zigzag rápido */
+@keyframes dodgeAnim {
+  0%   { transform: translateX(0);    opacity: 1; }
+  20%  { transform: translateX(18px); opacity: 0.3; }
+  40%  { transform: translateX(-18px); opacity: 0.3; }
+  60%  { transform: translateX(12px); opacity: 0.5; }
+  80%  { transform: translateX(-8px); opacity: 0.7; }
+  100% { transform: translateX(0);    opacity: 1; }
+}
+
+.avatar-dodge {
+  animation: dodgeAnim 0.45s ease forwards;
+}
+
+/* HP bajo - pulso rojo continuo */
+@keyframes dangerPulse {
+  0%   { box-shadow: 0 0 8px rgba(231, 76, 60, 0.4); }
+  50%  { box-shadow: 0 0 20px rgba(231, 76, 60, 0.9); }
+  100% { box-shadow: 0 0 8px rgba(231, 76, 60, 0.4); }
+}
+
+.avatar-danger {
+  animation: idleBreath 3s ease-in-out infinite, dangerPulse 1.2s ease-in-out infinite;
+}
+
+/* Morir - cae y desvanece */
+@keyframes deathAnim {
+  0%   { transform: translateY(0) rotate(0deg); opacity: 1; }
+  30%  { transform: translateY(10px) rotate(5deg); opacity: 0.8; }
+  100% { transform: translateY(80px) rotate(15deg); opacity: 0; }
+}
+
+.avatar-death {
+  animation: deathAnim 0.9s ease forwards;
+}
+
+/* Curarse - partículas */
+.heal-particle {
+  position: absolute;
+  font-size: 14px;
+  pointer-events: none;
+  animation: healFloat 1s ease-out forwards;
+  z-index: 999;
+}
+
+@keyframes healFloat {
+  0%   { opacity: 1; transform: translateY(0) scale(1); }
+  100% { opacity: 0; transform: translateY(-60px) scale(0.6); }
+}
+
+/* Usar habilidad - destello de color de clase */
+@keyframes skillFlash {
+  0%   { opacity: 0; }
+  30%  { opacity: 0.6; }
+  100% { opacity: 0; }
+}
+
+.avatar-skill-flash::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 10px;
+  animation: skillFlash 0.6s ease forwards;
+  z-index: 10;
+  pointer-events: none;
+}
+
+.avatar-skill-flash.guerrero::before { background: rgba(231, 76, 60, 0.6); }
+.avatar-skill-flash.mago::before     { background: rgba(52, 152, 219, 0.6); }
+.avatar-skill-flash.explorador::before { background: rgba(46, 204, 113, 0.6); }
+
+/* Habilidad híbrida - dos colores */
+@keyframes hybridFlash {
+  0%   { background: rgba(52, 152, 219, 0.5); }
+  50%  { background: rgba(231, 76, 60, 0.5); }
+  100% { background: rgba(142, 68, 173, 0.5); }
+}
+
+.avatar-hybrid-flash::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 10px;
+  animation: hybridFlash 0.7s ease forwards;
+  z-index: 10;
+  pointer-events: none;
+}
+
+/* Escudo rompiéndose - grieta */
+.shield-crack {
+  position: absolute;
+  inset: 0;
+  border-radius: 10px;
+  background: linear-gradient(
+    45deg,
+    transparent 45%,
+    rgba(231, 76, 60, 0.5) 50%,
+    transparent 55%
+  );
+  animation: crackAnim 0.6s ease forwards;
+  z-index: 10;
+  pointer-events: none;
+}
+
+@keyframes crackAnim {
+  0%   { opacity: 0; transform: scale(1); }
+  30%  { opacity: 1; }
+  100% { opacity: 0; transform: scale(1.05); }
+}
+
+/* Victoria jefe final */
+@keyframes victoryAnim {
+  0%   { transform: translateY(0) scale(1);    filter: brightness(0.6) blur(1px); }
+  40%  { transform: translateY(-30px) scale(1.1); filter: brightness(1.5) blur(0px); }
+  70%  { transform: translateY(-20px) scale(1.08); filter: brightness(2) blur(0px); }
+  100% { transform: translateY(0) scale(1);    filter: brightness(0.6) blur(1px); }
+}
+
+.avatar-victory {
+  animation: victoryAnim 1.2s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+/* Habilidad monstruo - brillo por tipo */
+@keyframes monsterAbilityFlash {
+  0%   { opacity: 0; }
+  40%  { opacity: 0.7; }
+  100% { opacity: 0; }
+}
+
+.avatar-monster-ability::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 10px;
+  animation: monsterAbilityFlash 0.6s ease forwards;
+  z-index: 10;
+  pointer-events: none;
+}
+
+.avatar-monster-ability.mago::before       { background: rgba(52, 152, 219, 0.6); }
+.avatar-monster-ability.guerrero::before   { background: rgba(231, 76, 60, 0.6); }
+.avatar-monster-ability.explorador::before { background: rgba(46, 204, 113, 0.6); }
+.avatar-monster-ability.boss::before       { background: rgba(80, 0, 0, 0.7); }
+
+/* Regeneración mago - ondas */
+.regen-wave {
+  position: absolute;
+  inset: 0;
+  border-radius: 10px;
+  border: 2px solid rgba(52, 152, 219, 0.8);
+  animation: regenWave 0.8s ease-out forwards;
+  pointer-events: none;
+  z-index: 10;
+}
+
+@keyframes regenWave {
+  0%   { transform: scale(1);   opacity: 0.8; }
+  100% { transform: scale(1.3); opacity: 0; }
 }
