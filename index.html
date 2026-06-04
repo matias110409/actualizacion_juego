@@ -19,7 +19,9 @@
             <button class="intro-btn" onclick="goToClassSelection()">INICIAR JUEGO</button>
             <button class="intro-btn" onclick="toggleConfig()">CONFIGURACIÓN</button>
         </div>
-        <div id="configPanel">
+
+    </div>
+         <div id="configPanel">
     <div id="configPanelInner">
             <h2 id="configTitle">CONFIGURACIÓN</h2>
 
@@ -34,11 +36,9 @@
             </div>
 
             <button class="config-back-btn" onclick="toggleConfig()">← VOLVER</button>
+            <button class="config-back-btn" onclick="goToIntro()">🏠 MENÚ PRINCIPAL</button>
         </div>
     </div>
-
-    </div>
-
     <!-- Pantalla de selección de clase -->
     <div id="start-screen" class="hidden">
         <h1>Mazmorras</h1>
@@ -157,7 +157,8 @@
             <i class="fa-solid fa-skull"></i> ?
             </button>
             </div>
-
+            <!-- Botón de configuración en pantalla de batalla -->
+            <button id="gameConfigBtn" onclick="toggleConfig()">⚙️</button>
             <!-- Modal: Info del Jugador -->
             <div id="playerInfoModal" class="modal hidden">
             <div class="modal-content">

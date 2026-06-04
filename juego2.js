@@ -216,6 +216,19 @@ function selectClass(playerClass) {
 }
 
 // Variables globales
+let activeEffects = {
+    monsterStunned: false,          // Helar / Golpe Aturdidor — el monstruo pierde su turno
+    playerDamageReduction: 1,       // Postura Defensiva (0.2) / Escudo Arcano (0) — multiplicador de daño recibido
+    playerNextCritical: false,      // Ojo de Águila — el próximo ataque es crítico garantizado
+    monsterPoisonTurns: 0,          // Veneno — turnos restantes de veneno
+    monsterPoisonDamage: 3,         // Veneno — daño fijo por turno
+    playerGuaranteedDodge: false,   // Retirada Táctica — esquiva garantizada este turno
+    shieldArcane: false,            // Escudo Arcano — el próximo daño recibido se convierte en 0
+    novaIgnoresAbilities: false,    // Nova Arcana — el monstruo no usa habilidades este turno
+    eagleEyeActive: false,          // Ojo de Águila — bandera de crítico garantizado activa
+    preciseShot: false,             // Disparo Certero — ignora el contraataque del monstruo guerrero
+};
+
 let discardMode = false;
 let discardCountThisTurn = 0;
 const swords = {
@@ -325,9 +338,33 @@ const merchantSword = new Sword("❓ Arma No Identificada", 3);
 const merchantShield = new Shield("❓ Defensa No Identificada", 0.35, Infinity);
 const merchantBracelet = new Bracelet("Brazalete del Mercader", (player) => {});
 merchantShield.isUnbreakable = true;
-//nuevos avatars
 
+// Resetear todos los efectos temporales al inicio de cada turno del monstruo
+// IMPORTANTE: llamar a esto al inicio de monsterAttack()
+function resetTurnEffects() {
+    activeEffects.playerDamageReduction = 1;    // Sin reducción
+    activeEffects.shieldArcane = false;
+    activeEffects.novaIgnoresAbilities = false;
+    activeEffects.playerGuaranteedDodge = false;
+    activeEffects.preciseShot = false;
+    // NO reseteamos: monsterStunned, monsterPoisonTurns, eagleEyeActive
+    // porque esos persisten hasta que se consumen
+}
 
+// Resetear efectos al inicio de cada nuevo combate
+// IMPORTANTE: llamar esto en prepareNextMonster()
+function resetCombatEffects() {
+    activeEffects.monsterStunned = false;
+    activeEffects.playerDamageReduction = 1;
+    activeEffects.playerNextCritical = false;
+    activeEffects.monsterPoisonTurns = 0;
+    activeEffects.monsterPoisonDamage = 3;
+    activeEffects.playerGuaranteedDodge = false;
+    activeEffects.shieldArcane = false;
+    activeEffects.novaIgnoresAbilities = false;
+    activeEffects.eagleEyeActive = false;
+    activeEffects.preciseShot = false;
+}
 // Sobrescribir takeDamage para el escudo del mercader
 const originalTakeDamage = Shield.prototype.takeDamage;
 
@@ -464,12 +501,31 @@ function initIdleAnims() {
   document.getElementById("playerAvatar").classList.add("avatar-idle");
   document.getElementById("monsterAvatar").classList.add("avatar-idle");
 }
+// Aplica el efecto visual de congelado al avatar del monstruo
+// Pone el avatar azulado y "temblando de frío"
+function applyFreezeEffect() {
+    const el = document.getElementById("monsterAvatar");
+    el.classList.add("avatar-frozen");
+    // Se quita al inicio del siguiente turno del monstruo
+}
+ 
+function removeFreezeEffect() {
+    const el = document.getElementById("monsterAvatar");
+    el.classList.remove("avatar-frozen");
+}
 function playerAttack() {
     avatarAnim("playerAvatar", "avatar-attack-player", 450);
 
     setTimeout(() => {
         const damage = player.attack();
-        monster.hp -= damage;
+         // Ojo de Águila: crítico garantizado
+        let finalDamage = damage;
+        if (activeEffects.eagleEyeActive) {
+            finalDamage = damage * 2;
+            activeEffects.eagleEyeActive = false; // Se consume al usarse
+            player.lastAttackWasCritical = true;
+        }
+        monster.hp -= finalDamage;
 
         if (player.lastAttackWasCritical) {
             spawnFloatingNumber(damage, "critical", "monsterAvatar");
@@ -585,40 +641,509 @@ function playerBlock() {
     restoreIdleAnim("playerAvatar");
     discardCountThisTurn = 0;
 }
-
+function handleSpecialCard(action) {
+    disableHand(true);
+ 
+    switch (action) {
+ 
+        // ——— GUERRERO ———
+ 
+        case "golpeBrutal": {
+            // Ataque x1.5 pero cuesta 3 vida al jugador
+            avatarAnim("playerAvatar", "avatar-attack-player", 450);
+            setTimeout(() => {
+                const baseDamage = Math.floor(Math.random() * 6) + 1;
+                const damage = Math.floor(baseDamage * player.sword.multiplier * player.attackMultiplier * 1.5);
+                monster.hp -= damage;
+                // Costo de vida
+                player.hp = Math.max(player.hp - 3, 1);
+                spawnFloatingNumber(3, "damage", "playerAvatar");
+                spawnFloatingNumber(damage, "damage", "monsterAvatar");
+                avatarAnim("monsterAvatar", "avatar-damage", 400);
+                updateStats(`¡Golpe Brutal! ${damage} de daño. Te costó 3 de vida.`);
+                if (monster.hp <= 0) { handleMonsterDeath(); return; }
+                afterPlayerAction();
+            }, 200);
+            break;
+        }
+ 
+        case "sedDeSangre": {
+            // Daño = 50 - hp actual del jugador
+            avatarAnim("playerAvatar", "avatar-attack-player", 450);
+            setTimeout(() => {
+                const damage = Math.max(50 - player.hp, 1); // mínimo 1 de daño
+                monster.hp -= damage;
+                spawnFloatingNumber(damage, "critical", "monsterAvatar");
+                avatarAnim("monsterAvatar", "avatar-critical", 500);
+                updateStats(`¡Sed de Sangre! Tu dolor se convierte en ${damage} de daño.`);
+                if (monster.hp <= 0) { handleMonsterDeath(); return; }
+                afterPlayerAction();
+            }, 200);
+            break;
+        }
+ 
+        case "posturaDefensiva": {
+            // Sin ataque — reduce el próximo daño recibido un 80%
+            activeEffects.playerDamageReduction = 0.2; // Solo el 20% del daño pasa
+            triggerSkillAnim("Guerrero");
+            spawnFloatingNumber(0, "block", "playerAvatar");
+            updateStats(`¡Postura Defensiva! El próximo daño se reduce un 80%.`);
+            // Opción B: el monstruo ataca igual con delay visual
+            setTimeout(() => {
+                monsterAttack();
+                updateStats();
+                disableHand(false);
+                refreshBlockCards();
+            }, 900);
+            discardCountThisTurn = 0;
+            break;
+        }
+ 
+        case "golpeAturdidor": {
+            avatarAnim("playerAvatar", "avatar-attack-player", 450);
+            setTimeout(() => {
+                const damage = player.attack();
+                monster.hp -= damage;
+                activeEffects.monsterStunned = true;
+                applyFreezeEffect();
+                spawnFloatingNumber(damage, "damage", "monsterAvatar");
+                avatarAnim("monsterAvatar", "avatar-damage", 400);
+                updateStats(`¡Golpe Aturdidor! ${damage} de daño. El monstruo pierde su turno.`);
+                if (monster.hp <= 0) { handleMonsterDeath(); return; }
+                // Pasamos turno al monstruo — el check de stun en monsterAttack() lo bloquea
+                setTimeout(() => {
+                    monsterAttack();
+                    disableHand(false);
+                    refreshBlockCards();
+                    discardCountThisTurn = 0;
+                }, 800);
+            }, 200);
+            break;
+        }
+ 
+        case "contragolpe": {
+            // Solo jugable con 30hp o menos — daño doble
+            avatarAnim("playerAvatar", "avatar-attack-player", 450);
+            setTimeout(() => {
+                const baseDamage = player.attack(); // attack() ya incluye multiplicador de espada
+                const damage = baseDamage * 2;
+                monster.hp -= damage;
+                spawnFloatingNumber(damage, "critical", "monsterAvatar");
+                avatarAnim("monsterAvatar", "avatar-critical", 500);
+                updateStats(`¡Contragolpe! El dolor te da fuerza: ${damage} de daño.`);
+                if (monster.hp <= 0) { handleMonsterDeath(); return; }
+                afterPlayerAction();
+            }, 200);
+            break;
+        }
+ 
+        case "ejecucion": {
+            avatarAnim("playerAvatar", "avatar-attack-player", 450);
+            setTimeout(() => {
+                const threshold = monster.maxHp * 0.30;
+                if (monster.hp <= threshold) {
+                    // Muerte instantánea
+                    monster.hp = 0;
+                    spawnFloatingNumber(999, "critical", "monsterAvatar");
+                    avatarAnim("monsterAvatar", "avatar-death", 900);
+                    updateStats(`¡EJECUCIÓN! El ${monster.name} es eliminado instantáneamente.`);
+                    setTimeout(() => handleMonsterDeath(), 500);
+                } else {
+                    // Daño normal alto (base x2 sin multiplicador extra)
+                    const baseDamage = Math.floor(Math.random() * 6) + 1;
+                    const damage = Math.floor(baseDamage * player.sword.multiplier * player.attackMultiplier * 2);
+                    monster.hp -= damage;
+                    spawnFloatingNumber(damage, "damage", "monsterAvatar");
+                    avatarAnim("monsterAvatar", "avatar-damage", 400);
+                    updateStats(`Ejecución fallida — el ${monster.name} resiste. ${damage} de daño.`);
+                    if (monster.hp <= 0) { handleMonsterDeath(); return; }
+                    afterPlayerAction();
+                }
+            }, 200);
+            break;
+        }
+ 
+        // ——— MAGO ———
+ 
+        case "helar": {
+            activeEffects.monsterStunned = true;
+            applyFreezeEffect();
+            triggerSkillAnim("Mago");
+            spawnFloatingNumber(0, "block", "monsterAvatar");
+            updateStats(`¡Helar! El ${monster.name} está congelado y pierde su turno.`);
+            // El flag y el visual se limpian en monsterAttack() cuando detecta el stun
+            // Igual pasamos turno al monstruo para que el check se ejecute
+            setTimeout(() => {
+                monsterAttack();
+                disableHand(false);
+                refreshBlockCards();
+                discardCountThisTurn = 0;
+            }, 1000);
+            break;
+        }
+ 
+        case "drenar": {
+            // Daño mitad del normal, curás lo que dañaste
+            avatarAnim("playerAvatar", "avatar-attack-player", 450);
+            setTimeout(() => {
+                const baseDamage = Math.floor(Math.random() * 6) + 1;
+                const damage = Math.floor(baseDamage * player.sword.multiplier * player.attackMultiplier * 0.5);
+                monster.hp -= damage;
+                player.recoverHealth(damage); // Curas exactamente lo que dañaste
+                spawnFloatingNumber(damage, "damage", "monsterAvatar");
+                spawnFloatingNumber(damage, "heal", "playerAvatar");
+                spawnHealParticles("playerAvatar");
+                avatarAnim("monsterAvatar", "avatar-damage", 400);
+                updateStats(`¡Drenar! ${damage} de daño y recuperaste ${damage} de vida.`);
+                if (monster.hp <= 0) { handleMonsterDeath(); return; }
+                afterPlayerAction();
+            }, 200);
+            break;
+        }
+ 
+        case "mantoLunar": {
+            // Sin ataque — +20% bloqueo este turno, robás 1 carta extra
+            // El +20% se aplica temporalmente modificando blockChance
+            const bonusBlock = 0.20;
+            player.shield.blockChance += bonusBlock;
+            triggerSkillAnim("Mago");
+            spawnFloatingNumber(0, "block", "playerAvatar");
+            updateStats(`¡Manto Lunar! +20% de bloqueo este turno. Robás 1 carta extra.`);
+            // Robar 1 carta extra sin que el monstruo ataque
+            drawCards(1);
+            // Revertir el bonus al final del turno (cuando el monstruo ataque)
+            // Opción B: el monstruo ataca con delay visual
+            disableHand(true);
+            setTimeout(() => {
+                monsterAttack();
+                // Quitar el bonus después del ataque
+                player.shield.blockChance = Math.max(player.shield.blockChance - bonusBlock, 0.05);
+                updatePlayerStats();
+                disableHand(false);
+                refreshBlockCards();
+            }, 900);
+            discardCountThisTurn = 0;
+            break;
+        }
+ 
+        case "estudiar": {
+            // Sin ataque — robás 2 cartas sin que el monstruo ataque
+            triggerSkillAnim("Mago");
+            drawCards(2);
+            updateStats(`¡Estudiar! Robaste 2 cartas sin consecuencias.`);
+            disableHand(false);
+            refreshBlockCards();
+            discardCountThisTurn = 0;
+            break;
+        }
+ 
+        case "escudoArcano": {
+            // Sin ataque — el próximo daño recibido es 0
+            activeEffects.shieldArcane = true;
+            triggerSkillAnim("Mago");
+            spawnFloatingNumber(0, "block", "playerAvatar");
+            updateStats(`¡Escudo Arcano! El próximo daño que recibas será anulado.`);
+            // Opción B: el monstruo ataca con delay visual
+            setTimeout(() => {
+                monsterAttack(); // El flag shieldArcane se consume dentro de monsterAttack()
+                updateStats();
+                disableHand(false);
+                refreshBlockCards();
+            }, 900);
+            discardCountThisTurn = 0;
+            break;
+        }
+ 
+        case "novaArcana": {
+            // Daño fijo 35 — ignora habilidades del monstruo este turno
+            avatarAnim("playerAvatar", "avatar-attack-player", 450);
+            activeEffects.novaIgnoresAbilities = true;
+            setTimeout(() => {
+                const damage = 35;
+                monster.hp -= damage;
+                spawnFloatingNumber(damage, "critical", "monsterAvatar");
+                avatarAnim("monsterAvatar", "avatar-critical", 500);
+                triggerSkillAnim("Mago");
+                updateStats(`¡Nova Arcana! 35 de daño puro. El ${monster.name} no puede reaccionar.`);
+                if (monster.hp <= 0) { handleMonsterDeath(); return; }
+                afterPlayerAction();
+            }, 200);
+            break;
+        }
+ 
+        // ——— EXPLORADOR ———
+ 
+        case "disparoCertero": {
+            // Daño normal — ignora el contraataque del Monstruo Guerrero
+            activeEffects.preciseShot = true;
+            avatarAnim("playerAvatar", "avatar-attack-player", 450);
+            setTimeout(() => {
+                const damage = player.attack();
+                monster.hp -= damage;
+                spawnFloatingNumber(damage, "damage", "monsterAvatar");
+                avatarAnim("monsterAvatar", "avatar-damage", 400);
+                updateStats(`¡Disparo Certero! ${damage} de daño, ignorando el contraataque.`);
+                activeEffects.preciseShot = false;
+                if (monster.hp <= 0) { handleMonsterDeath(); return; }
+                afterPlayerAction();
+            }, 200);
+            break;
+        }
+ 
+        case "veneno": {
+            // Daño bajo ahora + 3 daño por 3 turnos
+            avatarAnim("playerAvatar", "avatar-attack-player", 450);
+            setTimeout(() => {
+                const baseDamage = Math.floor(Math.random() * 6) + 1;
+                const damage = Math.floor(baseDamage * player.sword.multiplier * 0.5);
+                monster.hp -= damage;
+                // Aplicar veneno (acumula si ya había veneno)
+                activeEffects.monsterPoisonTurns = 3;
+                activeEffects.monsterPoisonDamage = 3;
+                spawnFloatingNumber(damage, "damage", "monsterAvatar");
+                // Número flotante verde para el veneno
+                spawnFloatingNumber(3, "poison", "monsterAvatar");
+                avatarAnim("monsterAvatar", "avatar-damage", 400);
+                updateStats(`¡Veneno! ${damage} de daño + 3 de veneno durante 3 turnos.`);
+                if (monster.hp <= 0) { handleMonsterDeath(); return; }
+                afterPlayerAction();
+            }, 200);
+            break;
+        }
+ 
+        case "ojoDeAguila": {
+            // Sin ataque — próximo ataque de ese combate es crítico garantizado
+            activeEffects.eagleEyeActive = true;
+            triggerSkillAnim("Explorador");
+            spawnFloatingNumber(0, "block", "playerAvatar");
+            updateStats(`¡Ojo de Águila! Tu próximo ataque será un crítico garantizado.`);
+            // No ataca — el monstruo sí ataca (Opción B)
+            setTimeout(() => {
+                monsterAttack();
+                updateStats();
+                disableHand(false);
+                refreshBlockCards();
+            }, 900);
+            discardCountThisTurn = 0;
+            break;
+        }
+ 
+        case "retiradaTactica": {
+            // Esquiva garantizada este turno + roba 1 carta
+            activeEffects.playerGuaranteedDodge = true;
+            triggerSkillAnim("Explorador");
+            // Simular el esquive visual
+            avatarAnim("playerAvatar", "avatar-dodge", 450);
+            spawnFloatingNumber(0, "dodge", "playerAvatar");
+            drawCards(1);
+            updateStats(`¡Retirada Táctica! Esquivaste y robaste 1 carta.`);
+            // El monstruo ataca pero el esquive está garantizado
+            setTimeout(() => {
+                monsterAttack(); // dodge() retorna true por el flag
+                updateStats();
+                disableHand(false);
+                refreshBlockCards();
+                discardCountThisTurn = 0;
+            }, 900);
+            break;
+        }
+ 
+        case "ataqueDoble": {
+            // Dos ataques de daño mitad
+            avatarAnim("playerAvatar", "avatar-attack-player", 450);
+            setTimeout(() => {
+                const base1 = Math.floor(Math.random() * 6) + 1;
+                const dmg1 = Math.floor(base1 * player.sword.multiplier * player.attackMultiplier * 0.5);
+                monster.hp -= dmg1;
+                spawnFloatingNumber(dmg1, "damage", "monsterAvatar");
+ 
+                // Segundo golpe con delay para que se vea
+                setTimeout(() => {
+                    if (monster.hp <= 0) { handleMonsterDeath(); return; }
+                    avatarAnim("playerAvatar", "avatar-attack-player", 450);
+                    setTimeout(() => {
+                        const base2 = Math.floor(Math.random() * 6) + 1;
+                        const dmg2 = Math.floor(base2 * player.sword.multiplier * player.attackMultiplier * 0.5);
+                        monster.hp -= dmg2;
+                        spawnFloatingNumber(dmg2, "damage", "monsterAvatar");
+                        avatarAnim("monsterAvatar", "avatar-damage", 400);
+                        const total = dmg1 + dmg2;
+                        updateStats(`¡Ataque Doble! Dos golpes: ${dmg1} + ${dmg2} = ${total} de daño.`);
+                        if (monster.hp <= 0) { handleMonsterDeath(); return; }
+                        afterPlayerAction();
+                    }, 200);
+                }, 500);
+            }, 200);
+            break;
+        }
+ 
+        case "lluviaDeDagas": {
+            // 4 ataques de daño base sin multiplicador de arma
+            avatarAnim("playerAvatar", "avatar-attack-player", 450);
+            let totalDmg = 0;
+            let hits = 0;
+ 
+            function nextDaggerHit() {
+                if (hits >= 4) {
+                    updateStats(`¡Lluvia de Dagas! 4 golpes por un total de ${totalDmg} de daño.`);
+                    if (monster.hp <= 0) { handleMonsterDeath(); return; }
+                    afterPlayerAction();
+                    return;
+                }
+                setTimeout(() => {
+                    // Detener si el monstruo ya murió en un golpe anterior
+                    if (monster.hp <= 0) { handleMonsterDeath(); return; }
+                    const dmg = Math.floor(Math.random() * 6) + 1;
+                    monster.hp -= dmg;
+                    totalDmg += dmg;
+                    spawnFloatingNumber(dmg, "damage", "monsterAvatar");
+                    hits++;
+                    updateStats(`Lluvia de Dagas — golpe ${hits}/4...`);
+                    nextDaggerHit();
+                }, 250);
+            }
+ 
+            setTimeout(() => nextDaggerHit(), 200);
+            break;
+        }
+    }
+}
 function monsterAttack() {
-    const dodged = player.dodge();
-
+    // Si el monstruo está aturdido (Helar / Golpe Aturdidor), pierde su turno
+    if (activeEffects.monsterStunned) {
+        activeEffects.monsterStunned = false;
+        removeFreezeEffect();
+        discardCountThisTurn = 0;
+        return;
+    }
+    // Aplicar daño de veneno al inicio del turno del monstruo
+    if (activeEffects.monsterPoisonTurns > 0) {
+        monster.hp -= activeEffects.monsterPoisonDamage;
+        spawnFloatingNumber(activeEffects.monsterPoisonDamage, "poison", "monsterAvatar");
+        activeEffects.monsterPoisonTurns--;
+        updateStats(`El veneno hace ${activeEffects.monsterPoisonDamage} de daño al ${monster.name}. (${activeEffects.monsterPoisonTurns} turnos restantes)`);
+        if (monster.hp <= 0) {
+            setTimeout(() => handleMonsterDeath(), 400);
+            return;
+        }
+    }
+ 
+    // Esquive garantizado por Retirada Táctica
+    const dodged = activeEffects.playerGuaranteedDodge || player.dodge();
+    activeEffects.playerGuaranteedDodge = false; // Consumir el flag
+ 
     if (dodged) {
         avatarAnim("monsterAvatar", "avatar-attack-monster", 450);
         setTimeout(() => {
             avatarAnim("playerAvatar", "avatar-dodge", 450);
             spawnFloatingNumber(0, "dodge", "playerAvatar");
             updateStats(`${player.name} esquivó el ataque.`);
+            resetTurnEffects();
         }, 200);
     } else {
         avatarAnim("monsterAvatar", "avatar-attack-monster", 450);
         setTimeout(() => {
             let damage = Math.floor(Math.random() * monster.attack) + 1;
+ 
+            // Escudo Arcano: anular el daño completamente
+            if (activeEffects.shieldArcane) {
+                damage = 0;
+                activeEffects.shieldArcane = false;
+                spawnFloatingNumber(0, "block", "playerAvatar");
+                updateStats(`¡Escudo Arcano absorbió el ataque!`);
+                resetTurnEffects();
+                return;
+            }
+ 
+            // Postura Defensiva / reducción de daño activa
+            if (activeEffects.playerDamageReduction < 1) {
+                damage = Math.floor(damage * activeEffects.playerDamageReduction);
+            }
+ 
+            // Reducción del Guerrero (habilidad de clase)
             if (player.damageReductionActive) {
                 damage = Math.floor(damage * 0.5);
                 player.damageReductionActive = false;
             }
+ 
             player.hp -= damage;
             spawnFloatingNumber(damage, "damage", "playerAvatar");
             avatarAnim("playerAvatar", "avatar-damage", 400);
-
-            if (monster.ability) {
-                triggerMonsterAbilityAnim(monster.name);
-                monster.ability(player, monster);
+ 
+            // Habilidades del monstruo — respetando Nova Arcana y Disparo Certero
+            if (monster.ability && !activeEffects.novaIgnoresAbilities) {
+                // Contraataque del Guerrero ignorado por Disparo Certero
+                if (monster.name === "Monstruo Guerrero" && activeEffects.preciseShot) {
+                    // No ejecutar contraataque
+                } else {
+                    triggerMonsterAbilityAnim(monster.name);
+                    monster.ability(player, monster);
+                }
             }
-
+            activeEffects.novaIgnoresAbilities = false; // consumir después de que el monstruo atacó
+ 
             if (player.hp <= 0) { endGame(false); return; }
             updateStats(`El ${monster.name} atacó causando ${damage} de daño.`);
             restoreIdleAnim("playerAvatar");
+            resetTurnEffects(); // Limpiar efectos temporales al final del turno
         }, 200);
     }
     discardCountThisTurn = 0;
+}
+function handleMonsterDeath() {
+    monstersDefeated++;
+    resetCombatEffects(); // Limpiar efectos al cambiar de monstruo
+    removeFreezeEffect();
+    let message = `¡Has derrotado al ${monster.name}!`;
+ 
+    if (monstersDefeated === 10) {
+        avatarAnim("playerAvatar", "avatar-victory", 1200);
+        setTimeout(() => endGame(true), 1200);
+        return;
+    }
+ 
+    currentWeaponDrop = {
+        sword: getRandomSword(),
+        shield: getRandomShield(),
+        bracelet: getRandomBracelet(),
+        potion: getRandomPotion(),
+    };
+ 
+    setHandVisible(false);
+    disableHand(false);
+ 
+    if (hasAncestralPact) {
+        message += `\nEl monstruo dejó caer una poción de ${currentWeaponDrop.potion.name}.`;
+        document.getElementById("keepWeaponButton").classList.add("hidden");
+        document.getElementById("changeWeaponButton").classList.add("hidden");
+        document.getElementById("usePotionButton").classList.remove("hidden");
+        document.getElementById("ancestralLootButton").classList.remove("hidden");
+    } else {
+        message += `\nEl monstruo dejó caer:\n${currentWeaponDrop.sword.name}\n${currentWeaponDrop.shield.name}\n${currentWeaponDrop.bracelet.name}\n${currentWeaponDrop.potion.name}`;
+        document.getElementById("changeWeaponButton").classList.remove("hidden");
+        document.getElementById("keepWeaponButton").classList.remove("hidden");
+        document.getElementById("usePotionButton").classList.remove("hidden");
+    }
+ 
+    updateStats(message);
+ 
+    if (!merchantAppeared && [1, 3, 5, 7].includes(monstersDefeated)) {
+        if (Math.random() < 0.20) {
+            setTimeout(() => showMerchant(), 800);
+        }
+    }
+}
+function afterPlayerAction() {
+    disableHand(true);
+    discardCountThisTurn = 0;
+    setTimeout(() => {
+        monsterAttack();
+        updateStats();
+        disableHand(false);
+        if (player.shield && player.shield.broken) {
+            refreshBlockCards();
+        }
+    }, 900);
 }
 function changeWeapon() {
     player.sword = currentWeaponDrop.sword;
@@ -647,6 +1172,8 @@ function keepWeapon() {
 }
 
 function prepareNextMonster(message) {
+    resetCombatEffects();
+    removeFreezeEffect();
     monster = generateMonster(monstersDefeated);
     updateMonsterCard(monster);
     document.getElementById("changeWeaponButton").classList.add("hidden");
@@ -800,6 +1327,53 @@ function restartGame() {
     document.getElementById("start-screen").classList.remove("hidden");
     document.getElementById("mapToggleBtn").classList.add("hidden");
     document.getElementById("dungeonMap").classList.add("hidden");
+}
+function goToIntro() {
+    // Reiniciar todo el estado del juego
+    monstersDefeated = 0;
+    merchantAppeared = false;
+    hasAncestralPact = false;
+    hybridClass = null;
+    player = null;
+    skillCardsDealtThisRound = 0;
+    blockCardsAllowed = true;
+    playerHand = [];
+    discardMode = false;
+    discardCountThisTurn = 0;
+    resetCombatEffects();
+    removeFreezeEffect();
+
+    const hand = document.getElementById("actionHand");
+    if (hand) hand.innerHTML = "";
+
+    // Cerrar el panel de config
+    toggleConfig();
+
+    // Ocultar todas las pantallas
+    document.getElementById("game-screen").classList.add("hidden");
+    document.getElementById("start-screen").classList.add("hidden");
+    document.getElementById("end-screen").classList.add("hidden");
+    document.getElementById("mapToggleBtn").classList.add("hidden");
+    document.getElementById("dungeonMap").classList.add("hidden");
+
+    // Volver a la intro con fundido
+    const overlay = document.createElement("div");
+    overlay.style.cssText = `
+        position: fixed; inset: 0; background: black;
+        opacity: 0; z-index: 1000;
+        transition: opacity 0.6s ease; pointer-events: none;
+    `;
+    document.body.appendChild(overlay);
+
+    requestAnimationFrame(() => {
+        requestAnimationFrame(() => { overlay.style.opacity = "1"; });
+    });
+
+    setTimeout(() => {
+        document.getElementById("intro-screen").style.display = "";
+        overlay.style.opacity = "0";
+        setTimeout(() => overlay.remove(), 600);
+    }, 600);
 }
 function getRandomSword() {
   const keys = Object.keys(swords);
@@ -955,6 +1529,7 @@ function spawnFloatingNumber(amount, type, anchorElementId) {
     dodge:    { color: "#f1c40f", text: `💨 Esquivado` },
     shield:   { color: "#e67e22", text: `-${amount} escudo` },
     critical: { color: "#f39c12", text: `💥 CRÍTICO! -${amount}` },
+    poison:   { color: "#8e44ad", text: `☠️ -${amount} veneno` },
   };
 
   const c = config[type] || config.damage;
@@ -1302,11 +1877,37 @@ function testSound() {
 
 // Definición de tipos de carta por clase — fácil de expandir
 const cardTypes = {
-  attack:  (cls) => ({ type: "attack",  label: "Atacar",    img: `./targetas/${cls}_ataque.jpg`    }),
-  block:   (cls) => ({ type: "block",   label: "Bloquear",  img: `./targetas/${cls}_bloqueo.jpg`   }),
-  skill:   (cls) => ({ type: "skill",   label: labelForSkill(cls), img: `./targetas/${cls}_habilidad.jpg` }),
-  hybrid:  ()    => ({ type: "hybrid",  label: labelForSkill(hybridClass), img: `./targetas/${(hybridClass||"guerrero").toLowerCase()}_habilidad.jpg` }),
+    // — BÁSICAS (todas las clases) —
+    attack:  (cls) => ({ type: "attack",  label: "Atacar",    img: `./targetas/${cls}_ataque.jpg`    }),
+    block:   (cls) => ({ type: "block",   label: "Bloquear",  img: `./targetas/${cls}_bloqueo.jpg`   }),
+    skill:   (cls) => ({ type: "skill",   label: labelForSkill(cls), img: `./targetas/${cls}_habilidad.jpg` }),
+    hybrid:  ()    => ({ type: "hybrid",  label: labelForSkill(hybridClass), img: `./targetas/${(hybridClass||"guerrero").toLowerCase()}_habilidad.jpg` }),
+ 
+    // — GUERRERO —
+    golpeBrutal:      () => ({ type: "golpeBrutal",      label: "Golpe Brutal",      img: "./targetas/guerrero/golpeBrutal.jpg"      }),
+    sedDeSangre:      () => ({ type: "sedDeSangre",      label: "Sed de Sangre",     img: "./targetas/guerrero/sedDeSangre.jpg"      }),
+    posturaDefensiva: () => ({ type: "posturaDefensiva", label: "Postura Defensiva", img: "./targetas/guerrero/posturaDefensiva.jpg" }),
+    golpeAturdidor:   () => ({ type: "golpeAturdidor",   label: "Golpe Aturdidor",   img: "./targetas/guerrero/golpeAturdidor.jpg"   }),
+    contragolpe:      () => ({ type: "contragolpe",      label: "Contragolpe",       img: "./targetas/guerrero/contraataque.jpg"     }),
+    ejecucion:        () => ({ type: "ejecucion",        label: "Ejecución",         img: "./targetas/guerrero/guerrero_ulti.jpg"    }),
+ 
+    // — MAGO —
+    helar:          () => ({ type: "helar",          label: "Helar",          img: "./targetas/mago/helar.jpg"          }),
+    drenar:         () => ({ type: "drenar",         label: "Drenar",         img: "./targetas/mago/drenar.jpg"         }),
+    mantoLunar:     () => ({ type: "mantoLunar",     label: "Manto Lunar",    img: "./targetas/mago/mantoLunar.jpg"     }),
+    estudiar:       () => ({ type: "estudiar",       label: "Estudiar",       img: "./targetas/mago/estudiar.jpg"       }),
+    escudoArcano:   () => ({ type: "escudoArcano",   label: "Escudo Arcano",  img: "./targetas/mago/escudoArcano.jpg"   }),
+    novaArcana:     () => ({ type: "novaArcana",     label: "Nova Arcana",    img: "./targetas/mago/NovaArcana.jpg"     }),
+ 
+    // — EXPLORADOR —
+    disparoCertero: () => ({ type: "disparoCertero", label: "Disparo Certero", img: "./targetas/explorador/disparoCertero.jpg" }),
+    veneno:         () => ({ type: "veneno",         label: "Veneno",          img: "./targetas/explorador/veneno.jpg"         }),
+    ojoDeAguila:    () => ({ type: "ojoDeAguila",    label: "Ojo de Águila",   img: "./targetas/explorador/ojoDeAguila.jpg"    }),
+    retiradaTactica:() => ({ type: "retiradaTactica",label: "Retirada Táctica",img: "./targetas/explorador/retiradaTactica.jpg"}),
+    ataqueDoble:    () => ({ type: "ataqueDoble",    label: "Ataque Doble",    img: "./targetas/explorador/AtaqueDoble.jpg"   }),
+    lluviaDeDagas:  () => ({ type: "lluviaDeDagas",  label: "Lluvia de Dagas", img: "./targetas/explorador/lluviaDeDagas.jpg"  }),
 };
+ 
 
 function labelForSkill(cls) {
   const labels = { "Guerrero": "Furia", "Mago": "Meditar", "Explorador": "Fabricar" };
@@ -1317,10 +1918,29 @@ function labelForSkill(cls) {
 let playerHand = [];
 
 function getAvailableCardTypes() {
-  const cls = player.playerClass.toLowerCase();
-  const types = ["attack", "block", "skill"];
-  if (hasAncestralPact && hybridClass) types.push("hybrid");
-  return types;
+    const cls = player.playerClass;
+    const clsLow = cls.toLowerCase();
+ 
+    // Cartas básicas disponibles para todas las clases
+    let types = ["attack", "block", "skill"];
+    if (hasAncestralPact && hybridClass) types.push("hybrid");
+ 
+    // Agregar cartas especiales según la clase del jugador
+    if (cls === "Guerrero") {
+        types.push("golpeBrutal", "sedDeSangre", "posturaDefensiva", "golpeAturdidor", "ejecucion");
+        // Contragolpe solo aparece si el jugador tiene 30hp o menos
+        if (player.hp <= 30) types.push("contragolpe");
+    }
+ 
+    if (cls === "Mago") {
+        types.push("helar", "drenar", "mantoLunar", "estudiar", "escudoArcano", "novaArcana");
+    }
+ 
+    if (cls === "Explorador") {
+        types.push("disparoCertero", "veneno", "ojoDeAguila", "retiradaTactica", "ataqueDoble", "lluviaDeDagas");
+    }
+ 
+    return types;
 }
 
 // Contadores de carta por ronda
@@ -1328,27 +1948,44 @@ let skillCardsDealtThisRound = 0;
 let blockCardsAllowed = true;
 
 function drawRandomCard() {
-  const cls = player.playerClass.toLowerCase();
-  const types = getAvailableCardTypes().filter(type => {
+    const cls = player.playerClass.toLowerCase();
+ 
+    // Filtrar tipos no disponibles según condiciones actuales
+    const types = getAvailableCardTypes().filter(type => {
+        // Cartas de habilidad: limitadas por usos restantes
+        if (type === "skill" || type === "hybrid") {
+            return skillCardsDealtThisRound < player.skillUses;
+        }
+        // Cartas de bloqueo: solo si el escudo no está roto
+        if (type === "block") {
+            return blockCardsAllowed;
+        }
+        // Contragolpe ya está filtrado en getAvailableCardTypes()
+        // pero doble check por seguridad
+        if (type === "contragolpe") {
+            return player.hp <= 30;
+        }
+        return true;
+    });
+ 
+    // Fallback a ataque si no hay tipos válidos
+    if (types.length === 0) return cardTypes.attack(cls);
+ 
+    const type = types[Math.floor(Math.random() * types.length)];
+ 
+    // Contar cartas de habilidad repartidas esta ronda
     if (type === "skill" || type === "hybrid") {
-      return skillCardsDealtThisRound < player.skillUses;
+        skillCardsDealtThisRound++;
     }
-    if (type === "block") {
-      return blockCardsAllowed;
+ 
+    // Llamar la función del tipo correspondiente
+    // Las básicas reciben (cls), las especiales no necesitan parámetro
+    const basicTypes = ["attack", "block", "skill", "hybrid"];
+    if (basicTypes.includes(type)) {
+        return cardTypes[type](cls);
+    } else {
+        return cardTypes[type]();
     }
-    return true;
-  });
-
-  // Si no quedan tipos válidos solo saldrán ataques
-  if (types.length === 0) return cardTypes.attack(cls);
-
-  const type = types[Math.floor(Math.random() * types.length)];
-
-  if (type === "skill" || type === "hybrid") {
-    skillCardsDealtThisRound++;
-  }
-
-  return cardTypes[type](cls);
 }
 
 function drawCards(amount) {
@@ -1512,6 +2149,9 @@ function handleCardClick(card) {
       player.applySkill(hybridClass);
       disableHand(false);
       refreshBlockCards();
+    } else {
+        // NUEVAS CARTAS — delegar al manejador de cartas especiales
+        handleSpecialCard(action);
     }
   }, 380);
 }
