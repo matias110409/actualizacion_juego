@@ -149,13 +149,17 @@
             <p>Pociones: <span id="playerPotions"></span></p>
         </div>
                 <!-- Botones de ayuda -->
+            
             <div id="helpButtons">
-            <button class="help-btn" onclick="toggleModal('playerInfoModal')">
-            <i class="fa-solid fa-user"></i> ?
-            </button>
-            <button class="help-btn" onclick="toggleModal('monsterInfoModal')">
-            <i class="fa-solid fa-skull"></i> ?
-            </button>
+                <button class="help-btn" onclick="toggleModal('cardDeckModal')">
+                    <i class="fa-solid fa-layer-group"></i> ?
+                </button>
+                <button class="help-btn" onclick="toggleModal('playerInfoModal')">
+                    <i class="fa-solid fa-user"></i> ?
+                </button>
+                <button class="help-btn" onclick="toggleModal('monsterInfoModal')">
+                    <i class="fa-solid fa-skull"></i> ?
+                </button>
             </div>
             <!-- Botón de configuración en pantalla de batalla -->
             <button id="gameConfigBtn" onclick="toggleConfig()">⚙️</button>
@@ -192,6 +196,30 @@
             <p>100 puntos de vida y ataque elevado. Aparece en el combate 10. posee todas las habilidades de todos los monstruos.</p>
             </div>
          </div>
+             <!-- Modal: Mazo de Cartas -->
+            <div id="cardDeckModal" class="modal hidden">
+                <div class="modal-content" id="cardDeckModalContent">
+                    <button class="modal-close" onclick="toggleModal('cardDeckModal')">✕</button>
+                    <h3>📖 Tu Mazo</h3>
+                    <div id="cardDeckPanels">
+                        <!-- Panel izquierdo: carrusel -->
+                        <div id="cardCarouselPanel">
+                            <div id="carouselTrack"></div>
+                            <div id="carouselControls">
+                                <button class="carousel-arrow" id="carouselPrev" onclick="carouselMove(-1)">&#8592;</button>
+                                <span id="carouselCounter">1 / 1</span>
+                                <button class="carousel-arrow" id="carouselNext" onclick="carouselMove(1)">&#8594;</button>
+                            </div>
+                        </div>
+                        <!-- Divisor -->
+                        <div id="cardPanelDivider"></div>
+                        <!-- Panel derecho: detalle -->
+                        <div id="cardDetailPanel">
+                            <p class="empty-state">← Seleccioná<br>una carta</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
     </div>
     <!-- Botón mapa -->
     <button id="mapToggleBtn" class="hidden" onclick="toggleMap()">🗺️</button>

@@ -883,7 +883,7 @@ function handleSpecialCard(action) {
                 spawnFloatingNumber(damage, "damage", "monsterAvatar");
                 avatarAnim("monsterAvatar", "avatar-damage", 400);
                 updateStats(`¡Disparo Certero! ${damage} de daño, ignorando el contraataque.`);
-                activeEffects.preciseShot = false;
+                
                 if (monster.hp <= 0) { handleMonsterDeath(); return; }
                 afterPlayerAction();
             }, 200);
@@ -1081,7 +1081,7 @@ function monsterAttack() {
                 }
             }
             activeEffects.novaIgnoresAbilities = false; // consumir después de que el monstruo atacó
- 
+            activeEffects.preciseShot = false; 
             if (player.hp <= 0) { endGame(false); return; }
             updateStats(`El ${monster.name} atacó causando ${damage} de daño.`);
             restoreIdleAnim("playerAvatar");
@@ -1493,7 +1493,10 @@ document.addEventListener("DOMContentLoaded", function() {
 function toggleModal(id) {
   const modal = document.getElementById(id);
   modal.classList.toggle("hidden");
-
+    // Construir grilla de cartas al abrir
+  if (id === "cardDeckModal" && player && !modal.classList.contains("hidden")) {
+    buildCardDeckGrid();
+  }
   // Si es el modal del jugador, actualizamos sus stats al abrirlo
   if (id === "playerInfoModal" && player && !modal.classList.contains("hidden")) {
     document.getElementById("modalPlayerStats").innerHTML = `
@@ -2185,3 +2188,136 @@ document.addEventListener("DOMContentLoaded", function () {
   const discardBtn = document.getElementById("discardBtn");
   if (discardBtn) discardBtn.addEventListener("click", toggleDiscardMode);
 });
+// ===================== MODAL MAZO — CARRUSEL =====================
+const cardDescriptions = {
+    attack:           "Realizás un ataque normal con tu arma actual. El daño depende del multiplicador de tu espada.",
+    block:            "Intentás bloquear el próximo ataque del monstruo. Si bloqueás, recuperás 15 vida. Si fallás, recibís daño y una parte va a tu escudo.",
+    skill:            "Usás tu habilidad de clase. Guerrero: daño x2 y reducción de daño 50%. Mago: +15 vida y +5% bloqueo. Explorador: repara escudo y 50% de mejorar espada.",
+    golpeBrutal:      "Ataque x1.5 de daño. A cambio te cuesta 3 puntos de vida.",
+    sedDeSangre:      "Tu daño es igual a (50 - tu vida actual). Cuanto más herido estés, más daño hacés.",
+    posturaDefensiva: "No atacás este turno. El próximo daño que recibás se reduce un 80%.",
+    golpeAturdidor:   "Atacás con daño normal y el monstruo pierde su siguiente turno, congelado.",
+    contragolpe:      "Solo disponible con 30 HP o menos. Daño doble aprovechando tu desesperación.",
+    ejecucion:        "Si el monstruo tiene 30% o menos de vida lo eliminás instantáneamente. Si no, hacés daño x2.",
+    helar:            "No atacás. El monstruo queda congelado y pierde su siguiente turno.",
+    drenar:           "Atacás por la mitad del daño normal pero recuperás exactamente lo que dañaste.",
+    mantoLunar:       "Sin ataque. Ganás +20% de bloqueo este turno y robás 1 carta extra.",
+    estudiar:         "Sin ataque ni consecuencias. Robás 2 cartas adicionales.",
+    escudoArcano:     "Sin ataque. El próximo daño que recibás este turno es completamente anulado.",
+    novaArcana:       "Daño fijo de 35. El monstruo no puede usar sus habilidades especiales este turno.",
+    disparoCertero:   "Ataque normal que ignora el contraataque del Monstruo Guerrero.",
+    veneno:           "Daño reducido ahora, pero el monstruo recibe 3 de daño adicional durante 3 turnos.",
+    ojoDeAguila:      "Sin ataque. Tu próximo ataque en este combate será un crítico garantizado (daño x2).",
+    retiradaTactica:  "Esquivás el ataque del monstruo de forma garantizada y robás 1 carta extra.",
+    ataqueDoble:      "Dos golpes de daño mitad cada uno. Pueden sumar más que un ataque normal.",
+    lluviaDeDagas:    "Cuatro golpes de daño base sin multiplicador de arma. Útil para romper regeneración.",
+    hybrid:           "Usás la habilidad de tu clase híbrida obtenida con el Pacto Ancestral.",
+};
+let carouselCards = [];
+let carouselIndex = 0;
+const CARDS_PER_PAGE = 3;
+
+function buildCardDeckGrid() {
+    carouselIndex = 0;
+    carouselCards = [];
+
+    const cls = player.playerClass.toLowerCase();
+
+    const basicTypes = ["attack", "block", "skill"];
+    const classSpecial = {
+        guerrero:   ["golpeBrutal", "sedDeSangre", "posturaDefensiva", "golpeAturdidor", "contragolpe", "ejecucion"],
+        mago:       ["helar", "drenar", "mantoLunar", "estudiar", "escudoArcano", "novaArcana"],
+        explorador: ["disparoCertero", "veneno", "ojoDeAguila", "retiradaTactica", "ataqueDoble", "lluviaDeDagas"],
+    };
+
+    let allTypes = [...basicTypes, ...(classSpecial[cls] || [])];
+
+    if (hasAncestralPact && hybridClass) {
+        const hybridSpecial = classSpecial[hybridClass.toLowerCase()] || [];
+        allTypes = [...allTypes, "hybrid", ...hybridSpecial];
+    }
+
+    // Construir objetos de carta
+    const basicTypesList = ["attack", "block", "skill", "hybrid"];
+    carouselCards = allTypes.map(type => {
+        const data = basicTypesList.includes(type)
+            ? cardTypes[type](cls)
+            : cardTypes[type]();
+        return { ...data, type };
+    });
+
+    renderCarousel();
+    // Limpiar panel derecho
+    document.getElementById("cardDetailPanel").innerHTML =
+        `<p class="empty-state">← Seleccioná<br>una carta</p>`;
+}
+
+function renderCarousel() {
+    const track = document.getElementById("carouselTrack");
+    track.innerHTML = "";
+
+    const start = carouselIndex;
+    const end = Math.min(start + CARDS_PER_PAGE, carouselCards.length);
+    const visible = carouselCards.slice(start, end);
+
+    visible.forEach((card, i) => {
+        const el = document.createElement("div");
+        el.classList.add("carousel-card");
+        if (card.type === "hybrid") el.classList.add("hybrid-thumb");
+
+        el.innerHTML = `
+            <img src="${card.img}" alt="${card.label}">
+            <div class="carousel-card-label">${card.label}</div>
+        `;
+
+        el.addEventListener("click", () => {
+            // Marcar activa
+            document.querySelectorAll(".carousel-card").forEach(c => c.classList.remove("active"));
+            el.classList.add("active");
+            showCardDetail(card);
+        });
+
+        track.appendChild(el);
+
+        // Animación de entrada escalonada
+        el.style.opacity = "0";
+        el.style.transform = "translateY(20px)";
+        setTimeout(() => {
+            el.style.transition = "opacity 0.25s ease, transform 0.25s ease";
+            el.style.opacity = "1";
+            el.style.transform = "translateY(0)";
+        }, i * 80);
+    });
+
+    // Actualizar flechas y contador
+    const total = Math.ceil(carouselCards.length / CARDS_PER_PAGE);
+    const current = Math.floor(carouselIndex / CARDS_PER_PAGE) + 1;
+    document.getElementById("carouselCounter").textContent = `${current} / ${total}`;
+    document.getElementById("carouselPrev").disabled = carouselIndex === 0;
+    document.getElementById("carouselNext").disabled = end >= carouselCards.length;
+}
+
+function carouselMove(direction) {
+    const newIndex = carouselIndex + direction * CARDS_PER_PAGE;
+    if (newIndex < 0 || newIndex >= carouselCards.length) return;
+    carouselIndex = newIndex;
+    renderCarousel();
+    // Limpiar detalle al cambiar página
+    document.getElementById("cardDetailPanel").innerHTML =
+        `<p class="empty-state">← Seleccioná<br>una carta</p>`;
+}
+
+function showCardDetail(card) {
+    const panel = document.getElementById("cardDetailPanel");
+    const isHybrid = card.type === "hybrid";
+
+    panel.innerHTML = `
+        <img
+            src="${card.img}"
+            alt="${card.label}"
+            class="${isHybrid ? 'hybrid-detail' : ''}"
+        >
+        <p id="cardDetailName" class="${isHybrid ? 'hybrid-name' : ''}">${card.label}</p>
+        <p id="cardDetailDesc">${cardDescriptions[card.type] || "Sin descripción disponible."}</p>
+    `;
+}
