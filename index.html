@@ -11,7 +11,7 @@
     <!-- Audio elements for sound effects -->
     <audio id="blockSound" src="sounds/shield-guard-6963.mp3" preload="auto"></audio>
     <audio id="shieldBreakSound" src="sounds/small-rock-break-194553.mp3" preload="auto"></audio>
-
+    <audio id="bgMusic" src="sounds/dungeon.mp3" loop autoplay preload="auto"></audio>
     <!-- Pantalla de inicio -->
     <div id="intro-screen">
         <h1 id="mainTitle">MAZMORRAS</h1>
@@ -37,6 +37,7 @@
 
             <button class="config-back-btn" onclick="toggleConfig()">← VOLVER</button>
             <button class="config-back-btn" onclick="goToIntro()">🏠 MENÚ PRINCIPAL</button>
+            <button class="config-back-btn" onclick="toggleMapFromConfig()">🗺️ MAPA</button>
         </div>
     </div>
     <!-- Pantalla de selección de clase -->
@@ -98,7 +99,7 @@
     <!-- Pantalla de juego -->
     <div id="game-screen" class="hidden">
         <h2>Jugador: <span id="playerName"></span> (<span id="playerClass"></span>)</h2>
-            <div id="avatars">
+            <div id="avatars" style="display:none">
                 <div class="avatar-wrapper">
                     <div class="battle-card" id="playerAvatar">
                         <div class="card-bg" id="playerCardBg"></div>
@@ -121,14 +122,87 @@
                 </div>
             </div>
         
+            <!-- ============ HUD SUPERIOR ============ -->
+            <div id="battleHud">
 
+                <!-- Vida e info del jugador — arriba izquierda -->
+                    <div id="hudPlayer">
+                        <div id="hudPlayerInfo">
+                            <span id="hudPlayerName"></span>
+                            <span id="hudPlayerClass"></span>
+                            <div id="hudPlayerHp">
+                                <span id="hudHpIcon">❤️</span>
+                                <div id="hudHpBarWrapper">
+                                    <div id="hudHpBar"></div>
+                                </div>
+                                <span id="hudHpText">50/50</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Vida del monstruo — arriba derecha -->
+                    <div id="hudMonster">
+                        <div id="hudMonsterInfo">
+                            <span id="hudMonsterName">Monstruo</span>
+                            <div id="hudMonsterHp">
+                                <span id="hudHpIconMonster">💀</span>
+                                <div id="hudMonsterHpBarWrapper">
+                                    <div id="hudMonsterHpBar"></div>
+                                </div>
+                                <span id="hudMonsterHpText">0/0</span>
+                            </div>
+                        </div>
+                    </div>
+
+            </div>
+
+            <!-- ============ AREA DEL MONSTRUO ============ -->
+            <div id="monsterArea">
+
+                <!-- Imagen del monstruo -->
+                <div id="monsterSprite">
+                    <img id="monsterSpriteImg" src="" alt="Monstruo">
+                </div>
+
+                <!-- Espacio reservado para las cartas del monstruo (sistema futuro) -->
+                <div id="monsterCardZone">
+                    <!-- Aqui apareceran las cartas que juegue el monstruo -->
+                    <span id="monsterCardZonePlaceholder">...</span>
+                </div>
+
+            </div>
         <div id="message"></div>
                         <!-- Mazo -->
             <div id="deckWrapper">
                 <div id="cardDeck">
                     <img src="./targetas/mazo.jpg" alt="Mazo" class="deck-img">
+                    <span id="deckCount">0</span>
                 </div>
+                <span id="deckLabel">Mazo</span>
                 <button id="discardBtn" class="discard-btn">✕</button>
+            </div>
+            <!-- Mazo de descarte -->
+            <div id="discardPileWrapper">
+                <div id="discardPile" class="empty">
+                    <img id="discardPileImg" src="./targetas/mazo.jpg" alt="Descarte" style="display:none">
+                    <span id="discardPileCount">0</span>
+                </div>
+                <span id="discardPileLabel">Descarte</span>
+            </div>
+
+            <!-- Stamina -->
+            <div id="staminaDisplay">
+                <span id="staminaLabel">Stamina</span>
+                <div id="staminaOrbs"></div>
+                <span id="staminaText">5 / 5</span>
+            </div>
+
+            <!-- Boton terminar turno -->
+            <button id="endTurnBtn" onclick="endPlayerTurn()">FIN DE TURNO</button>
+
+            <!-- Overlay barajar -->
+            <div id="shuffleOverlay" style="display:none">
+                <span id="shuffleText">✦ BARAJANDO ✦</span>
             </div>
             <!-- Mano de cartas -->
             <div id="actionHand" class="action-hand"></div>
@@ -150,16 +224,21 @@
         </div>
                 <!-- Botones de ayuda -->
             
-            <div id="helpButtons">
-                <button class="help-btn" onclick="toggleModal('cardDeckModal')">
-                    <i class="fa-solid fa-layer-group"></i> ?
-                </button>
-                <button class="help-btn" onclick="toggleModal('playerInfoModal')">
-                    <i class="fa-solid fa-user"></i> ?
-                </button>
-                <button class="help-btn" onclick="toggleModal('monsterInfoModal')">
-                    <i class="fa-solid fa-skull"></i> ?
-                </button>
+            <!-- Panel desplegable de ayuda — borde derecho inferior -->
+            <div id="helpPanel">
+                <div id="helpButtons" class="collapsed">
+                    <button class="help-btn" onclick="toggleModal('cardDeckModal')">
+                        <i class="fa-solid fa-layer-group"></i>
+                    </button>
+                    <button class="help-btn" onclick="toggleModal('playerInfoModal')">
+                        <i class="fa-solid fa-user"></i>
+                    </button>
+                    <button class="help-btn" onclick="toggleModal('monsterInfoModal')">
+                        <i class="fa-solid fa-skull"></i>
+                    </button>
+                </div>
+                <!-- Flecha toggle -->
+                <button id="helpToggleBtn" onclick="toggleHelpPanel()">‹</button>
             </div>
             <!-- Botón de configuración en pantalla de batalla -->
             <button id="gameConfigBtn" onclick="toggleConfig()">⚙️</button>
@@ -175,7 +254,7 @@
             <h4><i class="fa-solid fa-hat-wizard"></i> Mago</h4>
             <p>Habilidad: <strong>Meditación</strong> — Recupera 15 puntos de vida y aumenta la probabilidad de bloqueo un 5%.</p>
             <h4><i class="fa-solid fa-binoculars"></i> Explorador</h4>
-            <p>Habilidad: <strong>Ingenio</strong> — Repara el escudo completamente. 50% de chance de mejorar la espada al siguiente nivel.</p>
+            <p>Habilidad: <strong>Ingenio</strong> — Repara el escudo completamente. 50% de chance de mejorar el arma al siguiente nivel.</p>
             </div>
             </div>
 
@@ -221,8 +300,6 @@
                 </div>
             </div>
     </div>
-    <!-- Botón mapa -->
-    <button id="mapToggleBtn" class="hidden" onclick="toggleMap()">🗺️</button>
 
     <!-- Panel del mapa -->
     <div id="dungeonMap" class="hidden">

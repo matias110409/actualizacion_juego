@@ -292,7 +292,7 @@ button:disabled {
 /* Nuevo estilo para el cuadro de estadísticas del jugador */
 .player-stats {
   position: absolute;
-  top: 20px;
+  top: 200px;
   right: 20px;
   background-color: rgba(20, 13, 8, 0.95);
   border: 1px solid #3d2b1a;
@@ -576,33 +576,90 @@ body {
   background-color: #6c3483;
 }
 /* Botones de ayuda */
+/* ============ PANEL DE AYUDA DESPLEGABLE ============ */
+#helpPanel {
+    position: fixed;
+    bottom: 24px;
+    right: 0;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    z-index: 100;
+}
+
+/* Contenedor de los 3 botones — se desliza */
 #helpButtons {
-  position: fixed;
-  bottom: 20px;
-  right: 20px;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  z-index: 100;
+    display: flex;
+    flex-direction: row;
+    gap: 10px;
+    overflow: hidden;
+    max-width: 0;
+    opacity: 0;
+    transition: max-width 0.4s cubic-bezier(0.4, 0, 0.2, 1),
+                opacity 0.3s ease,
+                padding 0.3s ease;
+    padding: 0;
+}
+
+#helpButtons.expanded {
+    max-width: 200px;
+    opacity: 1;
+    padding-right: 10px;
 }
 
 .help-btn {
-  width: 48px;
-  height: 48px;
-  border-radius: 50%;
-  background-color: #e67e22;
-  font-size: 14px;
-  font-weight: bold;
-  padding: 0;
-  margin: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  box-shadow: 0 3px 10px rgba(0,0,0,0.4);
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    background-color: rgba(20, 13, 8, 0.9);
+    border: 1px solid #c9a84c;
+    color: #c9a84c;
+    font-size: 16px;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 3px 10px rgba(0,0,0,0.5);
+    transition: background-color 0.2s ease, transform 0.2s ease;
+    /* Animacion de entrada escalonada */
+    flex-shrink: 0;
 }
 
 .help-btn:hover {
-  background-color: #d35400;
+    background-color: rgba(201, 168, 76, 0.15);
+    transform: scale(1.1);
+    border-color: #e8d48a;
+}
+
+/* Boton flecha toggle */
+#helpToggleBtn {
+    width: 28px;
+    height: 52px;
+    background-color: rgba(20, 13, 8, 0.9);
+    border: 1px solid #c9a84c;
+    border-right: none;
+    border-radius: 8px 0 0 8px;
+    color: #c9a84c;
+    font-size: 18px;
+    padding: 0;
+    margin: 0;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background-color 0.2s ease, color 0.2s ease;
+    box-shadow: -3px 0 10px rgba(0,0,0,0.4);
+}
+
+#helpToggleBtn:hover {
+    background-color: rgba(201, 168, 76, 0.15);
+    color: #e8d48a;
+}
+
+/* Flecha rotada cuando está abierto */
+#helpToggleBtn.open {
+    color: #e8d48a;
 }
 
 /* Modal */
@@ -696,7 +753,7 @@ body {
   width: 52px;
   height: 52px;
   border-radius: 50%;
-  background-color: #16a085;
+  background-color: #20794f;
   font-size: 22px;
   padding: 0;
   margin: 0;
@@ -708,7 +765,7 @@ body {
 }
 
 #mapToggleBtn:hover {
-  background-color: #1abc9c;
+  background-color: #258857;
 }
 
 /* Panel del mapa */
@@ -1794,4 +1851,665 @@ body {
     border-radius: 8px;
     padding: 10px 14px;
     margin: 0;
+}
+/* ===================== STAMINA ===================== */
+#staminaDisplay {
+    position: fixed;
+    bottom: 500px;
+    left: 205px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    z-index: 70;
+}
+
+#staminaLabel {
+    font-family: 'Georgia', serif;
+    font-size: 10px;
+    letter-spacing: 3px;
+    color: #c9a84c;
+    text-transform: uppercase;
+}
+
+#staminaOrbs {
+    display: flex;
+    gap: 5px;
+    flex-wrap: wrap;
+    max-width: 120px;
+    justify-content: center;
+}
+
+.stamina-orb {
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: radial-gradient(circle at 35% 35%, #f1c40f, #c9a84c);
+    border: 1px solid rgba(201, 168, 76, 0.5);
+    box-shadow: 0 0 6px rgba(201, 168, 76, 0.5);
+    transition: all 0.2s ease;
+}
+
+.stamina-orb.empty {
+    background: radial-gradient(circle at 35% 35%, #444, #2c2c2c);
+    border-color: rgba(100, 100, 100, 0.3);
+    box-shadow: none;
+}
+
+.stamina-orb.accumulated {
+    background: radial-gradient(circle at 35% 35%, #e67e22, #d35400);
+    border-color: rgba(230, 126, 34, 0.6);
+    box-shadow: 0 0 8px rgba(230, 126, 34, 0.6);
+}
+
+#staminaText {
+    font-family: 'Georgia', serif;
+    font-size: 12px;
+    color: #ecf0f1;
+    letter-spacing: 1px;
+}
+
+/* ===================== BOTON TERMINAR TURNO ===================== */
+#endTurnBtn {
+    position: fixed;
+    bottom: 340px;
+    left: 16px;
+    background: transparent;
+    border: 1px solid #c9a84c;
+    color: #c9a84c;
+    font-family: 'Georgia', serif;
+    font-size: 10px;
+    letter-spacing: 3px;
+    padding: 8px 16px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    clip-path: polygon(6px 0%, 100% 0%, calc(100% - 6px) 100%, 0% 100%);
+    margin: 0;
+    z-index: 70;
+    width: 140px;
+}
+
+#endTurnBtn:hover {
+    background: rgba(201, 168, 76, 0.15);
+    color: #e8d48a;
+    border-color: #e8d48a;
+    box-shadow: 0 0 16px rgba(201, 168, 76, 0.3);
+}
+
+#endTurnBtn:disabled {
+    opacity: 0.3;
+    cursor: not-allowed;
+    background: transparent;
+    box-shadow: none;
+}
+
+/* ===================== MAZO DE DESCARTE ===================== */
+#discardPileWrapper {
+    position: fixed;
+    left: 360px;
+    bottom: 130px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    z-index: 60;
+}
+
+#discardPile {
+    width: 140px;
+    height: 220px;
+    border-radius: 8px;
+    overflow: hidden;
+    border: 2px solid rgba(231, 76, 60, 0.4);
+    box-shadow: 4px 4px 0 2px rgba(0,0,0,0.4);
+    position: relative;
+    background-color: rgba(20, 10, 10, 0.8);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+#discardPile.empty {
+    border-color: rgba(100, 100, 100, 0.2);
+    opacity: 0.4;
+}
+
+#discardPileImg {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+    opacity: 0.7;
+}
+
+#discardPileCount {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-family: 'Georgia', serif;
+    font-size: 32px;
+    font-weight: bold;
+    color: #e74c3c;
+    text-shadow: 0 0 10px rgba(231, 76, 60, 0.8);
+    pointer-events: none;
+}
+
+#discardPileLabel {
+    font-family: 'Georgia', serif;
+    font-size: 9px;
+    letter-spacing: 2px;
+    color: #e74c3c;
+    text-transform: uppercase;
+    opacity: 0.7;
+}
+
+#deckCount {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-family: 'Georgia', serif;
+    font-size: 32px;
+    font-weight: bold;
+    color: #c9a84c;
+    text-shadow: 0 0 10px rgba(201, 168, 76, 0.8);
+    pointer-events: none;
+    z-index: 2;
+}
+
+#deckLabel {
+    font-family: 'Georgia', serif;
+    font-size: 9px;
+    letter-spacing: 2px;
+    color: #c9a84c;
+    text-transform: uppercase;
+    opacity: 0.7;
+}
+
+/* ===================== ANIMACION BARAJAR ===================== */
+#shuffleOverlay {
+    position: fixed;
+    inset: 0;
+    z-index: 300;
+    pointer-events: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+#shuffleText {
+    font-family: 'Georgia', serif;
+    font-size: 28px;
+    color: #c9a84c;
+    letter-spacing: 8px;
+    text-transform: uppercase;
+    opacity: 0;
+    text-shadow: 0 0 20px rgba(201, 168, 76, 0.8);
+    animation: shuffleReveal 1.8s ease forwards;
+}
+
+@keyframes shuffleReveal {
+    0%   { opacity: 0; transform: scale(0.7) rotate(-5deg); filter: blur(10px); }
+    30%  { opacity: 1; transform: scale(1.05) rotate(0deg); filter: blur(0px); }
+    70%  { opacity: 1; transform: scale(1); }
+    100% { opacity: 0; transform: scale(0.9); }
+}
+
+.shuffle-card {
+    position: fixed;
+    width: 60px;
+    height: 90px;
+    border-radius: 6px;
+    border: 1px solid rgba(201, 168, 76, 0.5);
+    background: rgba(20, 13, 8, 0.9);
+    pointer-events: none;
+    z-index: 299;
+    animation: shuffleFly var(--duration) ease-in-out forwards;
+}
+
+@keyframes shuffleFly {
+    0%   { transform: translate(0, 0) rotate(0deg); opacity: 0.9; }
+    50%  { transform: translate(var(--tx), var(--ty)) rotate(var(--rot)); opacity: 0.6; }
+    100% { transform: translate(0, 0) rotate(0deg); opacity: 0; }
+}
+
+/* Animacion carta al descarte */
+@keyframes flyToDiscard {
+    0%   { transform: translate(0, 0) rotate(0deg) scale(1); opacity: 1; }
+    100% { transform: translate(var(--dx), var(--dy)) rotate(20deg) scale(0.3); opacity: 0; }
+}
+
+.action-card.flying-to-discard {
+    animation: flyToDiscard 0.45s ease-in forwards !important;
+    pointer-events: none;
+    z-index: 200;
+}
+/* ===================== RESPONSIVE ===================== */
+@media (max-width: 1024px) {
+    #game-screen {
+        zoom: 0.85;
+    }
+    #helpButtons, #mapToggleBtn, #gameConfigBtn,
+    #deckWrapper, #discardPileWrapper, #staminaDisplay,
+    #endTurnBtn, #actionHand, .player-stats, #playerStats {
+        zoom: 0.85;
+    }
+}
+
+@media (max-width: 768px) {
+    #game-screen {
+        zoom: 0.65;
+    }
+    #helpButtons, #mapToggleBtn, #gameConfigBtn,
+    #deckWrapper, #discardPileWrapper, #staminaDisplay,
+    #endTurnBtn, #actionHand, .player-stats, #playerStats {
+        zoom: 0.65;
+    }
+}
+
+@media (max-width: 480px) {
+    #game-screen {
+        zoom: 0.45;
+    }
+    #helpButtons, #mapToggleBtn, #gameConfigBtn,
+    #deckWrapper, #discardPileWrapper, #staminaDisplay,
+    #endTurnBtn, #actionHand, .player-stats, #playerStats {
+        zoom: 0.45;
+    }
+}
+/* ============ HUD SUPERIOR ============ */
+#battleHud {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    padding: 12px 20px;
+    position: fixed;
+    top: 2;
+    left: 0;
+    right: 0;
+    z-index: 80;
+    pointer-events: none; /* No bloquea clicks */
+    background: linear-gradient(
+        to bottom,
+        rgba(0, 0, 0, 0) 0%,
+        transparent 100%
+    );
+}
+
+/* — Bloque jugador (izquierda) — */
+#hudPlayer {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 12px;
+    pointer-events: none;
+}
+
+#hudPlayerInfo {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+#hudPlayerName {
+    font-family: 'Georgia', serif;
+    font-size: 13px;
+    color: #c9a84c;
+    letter-spacing: 2px;
+}
+
+#hudPlayerClass {
+    font-family: 'Georgia', serif;
+    font-size: 10px;
+    color: #7f8c8d;
+    letter-spacing: 1px;
+}
+
+#hudPlayerHp {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 10px;
+}
+
+/* Barra de HP del jugador */
+#hudHpBarWrapper {
+    width: 160px;
+    height: 10px;
+    background: rgba(255,255,255,0.1);
+    border-radius: 5px;
+    overflow: hidden;
+    border: 1px solid rgba(231,76,60,0.3);
+}
+
+#hudHpBar {
+    height: 100%;
+    width: 100%; /* Se actualiza por JS */
+    background: linear-gradient(to right, #c0392b, #e74c3c);
+    border-radius: 5px;
+    transition: width 0.4s ease;
+}
+
+#hudHpText {
+    font-family: 'Georgia', serif;
+    font-size: 12px;
+    color: #ecf0f1;
+    min-width: 45px;
+}
+
+/* — Bloque monstruo (derecha) — */
+#hudMonster {
+    display: flex;
+    flex-direction: row-reverse;
+    align-items: center;
+    gap: 12px;
+    pointer-events: none;
+}
+
+#hudMonsterInfo {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 2px;
+}
+
+#hudMonsterName {
+    font-family: 'Georgia', serif;
+    font-size: 13px;
+    color: #831717;
+    letter-spacing: 2px;
+}
+
+#hudMonsterHp {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 10px;
+}
+
+#hudMonsterHpBarWrapper {
+    width: 160px;
+    height: 10px;
+    background: rgba(255,255,255,0.1);
+    border-radius: 5px;
+    overflow: hidden;
+    border: 1px solid rgba(231,76,60,0.3);
+}
+
+#hudMonsterHpBar {
+    height: 100%;
+    width: 100%; /* Se actualiza por JS */
+    background: linear-gradient(to right, #7b241c, #e74c3c);
+    border-radius: 5px;
+    transition: width 0.4s ease;
+}
+
+#hudMonsterHpText {
+    font-family: 'Georgia', serif;
+    font-size: 12px;
+    color: #ecf0f1;
+    min-width: 45px;
+}
+
+/* ============ AREA DEL MONSTRUO ============ */
+#monsterArea {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin-top: 80px; /* Espacio para el HUD fijo */
+    gap: 16px;
+}
+
+/* Contenedor del sprite — tamaño moderado */
+#monsterSprite {
+    position: relative;
+    width: 480px;
+    max-width: 90vw;
+}
+
+#monsterSpriteImg {
+    width: 100%;
+    height: auto;
+    display: block;
+    /* Animacion idle suave */
+    animation: monsterIdleFloat 3s ease-in-out infinite;
+    filter: drop-shadow(0 8px 24px rgba(231,76,60,0.3));
+}
+
+/* Idle del monstruo — flota suavemente */
+@keyframes monsterIdleFloat {
+    0%   { transform: translateY(0px);   }
+    50%  { transform: translateY(-8px);  }
+    100% { transform: translateY(0px);   }
+}
+
+/* ============ ZONA RESERVADA CARTAS DEL MONSTRUO ============ */
+#monsterCardZone {
+    width: 100%;
+    max-width: 600px;
+    min-height: 60px;
+    border: 1px dashed rgba(231,76,60,0.2);
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    /* Zona visible pero discreta — se activara en el sistema del monstruo */
+}
+
+#monsterCardZonePlaceholder {
+    font-family: 'Georgia', serif;
+    font-size: 11px;
+    color: rgba(231,76,60,0.2);
+    letter-spacing: 3px;
+}
+
+/* ============ ANIMACIONES DEL SPRITE DEL MONSTRUO ============ */
+
+/* Recibir daño */
+@keyframes monsterSpriteHit {
+    0%   { transform: translateX(0) translateY(var(--idle-y, 0)); }
+    20%  { transform: translateX(-12px) translateY(var(--idle-y, 0)); filter: brightness(2) saturate(0); }
+    40%  { transform: translateX(12px) translateY(var(--idle-y, 0)); }
+    60%  { transform: translateX(-6px) translateY(var(--idle-y, 0)); }
+    80%  { transform: translateX(6px) translateY(var(--idle-y, 0)); }
+    100% { transform: translateX(0) translateY(var(--idle-y, 0)); filter: brightness(1); }
+}
+
+.monster-hit {
+    animation: monsterSpriteHit 0.4s ease forwards !important;
+}
+
+/* Muerte */
+@keyframes monsterSpriteDeath {
+    0%   { transform: translateY(0); opacity: 1; filter: brightness(1); }
+    30%  { transform: translateY(-20px); filter: brightness(3) saturate(0); }
+    100% { transform: translateY(80px); opacity: 0; filter: brightness(0); }
+}
+
+.monster-death {
+    animation: monsterSpriteDeath 0.9s ease forwards !important;
+}
+
+/* Congelado */
+.monster-frozen {
+    filter: brightness(0.7) saturate(0.2) hue-rotate(180deg) 
+            drop-shadow(0 0 12px rgba(100,180,255,0.8)) !important;
+}
+
+/* Atacar — avanza hacia el jugador (hacia abajo en primera persona) */
+@keyframes monsterSpriteAttack {
+    0%   { transform: translateY(0) scale(1); }
+    40%  { transform: translateY(40px) scale(1.08); }
+    100% { transform: translateY(0) scale(1); }
+}
+
+.monster-attacking {
+    animation: monsterSpriteAttack 0.45s ease forwards !important;
+}
+/* ============ CARTAS DEL MONSTRUO ============ */
+
+/* Zona donde aparecen las cartas del monstruo */
+#monsterCardZone {
+    display: flex;
+    flex-direction: row;
+    gap: 12px;
+    align-items: center;
+    justify-content: center;
+    min-height: 160px;
+    padding: 8px;
+}
+
+/* Ocultar placeholder cuando hay cartas */
+#monsterCardZone.has-cards #monsterCardZonePlaceholder {
+    display: none;
+}
+
+/* Contenedor de cada carta del monstruo — necesario para el flip 3D */
+.monster-card-wrapper {
+    width: 90px;
+    height: 140px;
+    perspective: 600px; /* Profundidad del efecto 3D */
+    flex-shrink: 0;
+}
+
+/* Carta en si — tiene dos caras */
+.monster-card {
+    width: 100%;
+    height: 100%;
+    position: relative;
+    transform-style: preserve-3d; /* Mantener el 3D en los hijos */
+    transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+    cursor: default;
+}
+
+/* Estado volteado */
+.monster-card.flipped {
+    transform: rotateY(180deg);
+}
+
+/* Cara trasera — el dorso de la carta */
+.monster-card-back {
+    position: absolute;
+    inset: 0;
+    border-radius: 8px;
+    overflow: hidden;
+    backface-visibility: hidden; /* Solo visible cuando no está volteada */
+    border: 2px solid rgba(231, 76, 60, 0.4);
+    box-shadow: 0 4px 16px rgba(0,0,0,0.6);
+}
+
+.monster-card-back img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+    opacity: 0.8;
+}
+
+/* Cara delantera — el frente de la carta */
+.monster-card-front {
+    position: absolute;
+    inset: 0;
+    border-radius: 8px;
+    overflow: hidden;
+    backface-visibility: hidden; /* Solo visible cuando está volteada */
+    transform: rotateY(180deg); /* Empieza mirando para adentro */
+    border: 2px solid rgba(231, 76, 60, 0.7);
+    box-shadow: 0 4px 16px rgba(231, 76, 60, 0.3);
+    background: rgba(20, 10, 10, 0.95);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 8px;
+}
+
+.monster-card-front .card-icon-big {
+    font-size: 28px;
+}
+
+.monster-card-front .card-name {
+    font-family: 'Georgia', serif;
+    font-size: 8px;
+    color: #c9a84c;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    text-align: center;
+    line-height: 1.4;
+}
+
+.monster-card-front .card-type-bar {
+    width: 100%;
+    padding: 3px 0;
+    text-align: center;
+    font-size: 7px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    border-radius: 4px;
+    font-family: 'Georgia', serif;
+}
+
+/* Colores por tipo de carta */
+.monster-card-front.type-attack .card-type-bar {
+    background: rgba(231, 76, 60, 0.3);
+    color: #e74c3c;
+    border: 1px solid rgba(231, 76, 60, 0.4);
+}
+
+.monster-card-front.type-attack-strong .card-type-bar {
+    background: rgba(192, 57, 43, 0.4);
+    color: #c0392b;
+    border: 1px solid rgba(192, 57, 43, 0.5);
+}
+
+.monster-card-front.type-block .card-type-bar {
+    background: rgba(52, 152, 219, 0.3);
+    color: #3498db;
+    border: 1px solid rgba(52, 152, 219, 0.4);
+}
+
+.monster-card-front.type-ability .card-type-bar {
+    background: rgba(142, 68, 173, 0.3);
+    color: #8e44ad;
+    border: 1px solid rgba(142, 68, 173, 0.4);
+}
+
+/* Animacion de entrada de la carta */
+@keyframes monsterCardAppear {
+    0%   { transform: translateY(-40px) scale(0.8); opacity: 0; }
+    60%  { transform: translateY(4px) scale(1.05); opacity: 1; }
+    100% { transform: translateY(0) scale(1); opacity: 1; }
+}
+
+.monster-card-wrapper.appearing {
+    animation: monsterCardAppear 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+/* Carta siendo jugada — se levanta */
+@keyframes monsterCardPlay {
+    0%   { transform: translateY(0) scale(1); }
+    40%  { transform: translateY(-20px) scale(1.1); }
+    100% { transform: translateY(0) scale(1); }
+}
+
+.monster-card-wrapper.playing {
+    animation: monsterCardPlay 0.35s ease forwards;
+}
+
+/* Carta volando al descarte */
+@keyframes monsterCardDiscard {
+    0%   { transform: translate(0, 0) rotate(0deg) scale(1); opacity: 1; }
+    100% { transform: translate(var(--mdx), var(--mdy)) rotate(15deg) scale(0.3); opacity: 0; }
+}
+
+.monster-card-wrapper.discarding-monster {
+    animation: monsterCardDiscard 0.4s ease-in forwards !important;
+    pointer-events: none;
+}
+
+/* Carta bloqueada — brillo azul */
+.monster-card-wrapper.blocking {
+    filter: drop-shadow(0 0 12px rgba(52, 152, 219, 0.8));
 }
