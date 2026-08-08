@@ -4,6 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Juego por Roles</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;900&family=Cinzel+Decorative:wght@400;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="juego2.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
 </head>
@@ -40,17 +43,30 @@
             <button class="config-back-btn" onclick="toggleMapFromConfig()">🗺️ MAPA</button>
         </div>
     </div>
-    <!-- Pantalla de selección de clase -->
+    <!-- Pantalla de selección de clase (Hero Showcase) -->
     <div id="start-screen" class="hidden">
-        <h1>Mazmorras</h1>
-        <div id="nameInputContainer">
-            <label for="playerNameInput">jugador: </label>
-            <input type="text" id="playerNameInput" placeholder="Tu nombre...">
-        </div>
-        <label id="classLabel">Elige tu clase:</label>
-        <div id="classCards">
+        <!-- Aura / Glow de Fondo Dinámico -->
+        <div id="heroAuraBg" class="hero-aura-bg"></div>
 
-            <div class="class-card" id="card-Guerrero" onclick="selectClass('Guerrero')">
+        <!-- Barra Superior / Header -->
+        <div class="start-top-bar">
+            <button class="back-to-menu-btn" onclick="goToIntro()">
+                <i class="fa-solid fa-arrow-left"></i> Menú Principal
+            </button>
+            <h2 class="start-main-title">ELECCIÓN DE HÉROE</h2>
+            <div id="nameInputContainer" class="hero-name-container">
+                <i class="fa-solid fa-user-ninja name-icon"></i>
+                <input type="text" id="playerNameInput" placeholder="Nombre de tu héroe..." maxlength="16">
+            </div>
+        </div>
+
+        <p class="select-subtitle">Selecciona tu clase para adentrarte en la mazmorra</p>
+
+        <!-- Tarjetas de Héroes -->
+        <div id="classCards" class="hero-showcase-grid">
+
+            <div class="class-card hero-card" id="card-Guerrero" onclick="selectClass('Guerrero')">
+                <div class="hero-card-tag">⚔️ Tanque</div>
                 <div class="card-bg" style="background-image: url('./images/card_guerrero.jpg')"></div>
                 <div class="card-overlay"></div>
                 <div class="card-content">
@@ -64,7 +80,8 @@
                 </div>
             </div>
 
-            <div class="class-card" id="card-Mago" onclick="selectClass('Mago')">
+            <div class="class-card hero-card" id="card-Mago" onclick="selectClass('Mago')">
+                <div class="hero-card-tag">🔮 Mágico</div>
                 <div class="card-bg" style="background-image: url('./images/card_mago.jpg')"></div>
                 <div class="card-overlay"></div>
                 <div class="card-content">
@@ -78,7 +95,8 @@
                 </div>
             </div>
 
-            <div class="class-card" id="card-Explorador" onclick="selectClass('Explorador')">
+            <div class="class-card hero-card" id="card-Explorador" onclick="selectClass('Explorador')">
+                <div class="hero-card-tag">🛠️ Táctico</div>
                 <div class="card-bg" style="background-image: url('./images/card_explorador.jpg')"></div>
                 <div class="card-overlay"></div>
                 <div class="card-content">
@@ -93,7 +111,19 @@
             </div>
 
         </div>
-        <button onclick="startGame()" id="startButton">Comenzar Juego</button>
+
+        <!-- Panel de Detalle del Héroe Seleccionado -->
+        <div id="heroSelectedDetail" class="hero-selected-detail hidden">
+            <div id="heroDetailContent" class="hero-detail-content"></div>
+        </div>
+
+        <!-- Botón de Inicio y Errores -->
+        <div class="start-action-footer">
+            <button onclick="startGame()" id="startButton" class="hero-start-btn">
+                <span>COMENZAR LA AVENTURA</span> <i class="fa-solid fa-shield-halved"></i>
+            </button>
+            <div id="startError" class="start-error" style="display:none;"></div>
+        </div>
     </div>
 
     <!-- Pantalla de juego -->
@@ -134,6 +164,7 @@
                                 <span id="hudHpIcon">❤️</span>
                                 <div id="hudHpBarWrapper">
                                     <div id="hudHpBar"></div>
+                                    <img id="hudHpBarFrame" src="UI/barra de vida jugador.png" alt="Barra de vida">
                                 </div>
                                 <span id="hudHpText">50/50</span>
                             </div>
@@ -148,6 +179,7 @@
                                 <span id="hudHpIconMonster">💀</span>
                                 <div id="hudMonsterHpBarWrapper">
                                     <div id="hudMonsterHpBar"></div>
+                                    <img id="hudMonsterHpBarFrame" src="UI/barra de vida monstruo.png" alt="Barra de vida monstruo">
                                 </div>
                                 <span id="hudMonsterHpText">0/0</span>
                             </div>
@@ -206,6 +238,9 @@
             </div>
             <!-- Mano de cartas -->
             <div id="actionHand" class="action-hand"></div>
+        <div id="craftLootContainer" class="hidden">
+            <button id="lootGoToMapBtn" class="craft-loot-btn main-action" onclick="finishLootAndGoToMap()"><i class="fa-solid fa-map"></i> Continuar al Mapa</button>
+        </div>
         <button id="changeWeaponButton" class="hidden" onclick="changeWeapon()">Cambiar Conjunto</button>
         <button id="keepWeaponButton" class="hidden" onclick="keepWeapon()">Mantener Conjunto</button>
         <button id="usePotionButton" class="hidden" onclick="usePotion()">Usar Poción</button>
@@ -227,13 +262,19 @@
             <!-- Panel desplegable de ayuda — borde derecho inferior -->
             <div id="helpPanel">
                 <div id="helpButtons" class="collapsed">
-                    <button class="help-btn" onclick="toggleModal('cardDeckModal')">
+                    <button class="help-btn" title="Ver Inventario" onclick="openInventoryModal()">
+                        <i class="fa-solid fa-briefcase"></i>
+                    </button>
+                    <button class="help-btn help-btn-disabled" title="Forja (disponible en el Mapa)" disabled>
+                        <i class="fa-solid fa-hammer"></i>
+                    </button>
+                    <button class="help-btn" title="Tu Mazo" onclick="toggleModal('cardDeckModal')">
                         <i class="fa-solid fa-layer-group"></i>
                     </button>
-                    <button class="help-btn" onclick="toggleModal('playerInfoModal')">
+                    <button class="help-btn" title="Info Jugador" onclick="toggleModal('playerInfoModal')">
                         <i class="fa-solid fa-user"></i>
                     </button>
-                    <button class="help-btn" onclick="toggleModal('monsterInfoModal')">
+                    <button class="help-btn" title="Monstruos" onclick="toggleModal('monsterInfoModal')">
                         <i class="fa-solid fa-skull"></i>
                     </button>
                 </div>
@@ -242,9 +283,42 @@
             </div>
             <!-- Botón de configuración en pantalla de batalla -->
             <button id="gameConfigBtn" onclick="toggleConfig()">⚙️</button>
-            <!-- Modal: Info del Jugador -->
-            <div id="playerInfoModal" class="modal hidden">
-            <div class="modal-content">
+    </div>
+
+    <!-- Pantalla del mapa (pantalla propia) -->
+    <div id="map-screen" class="hidden">
+        <div id="mapHeader">
+            <div class="map-header-left">
+                <span id="mapPlayerInfo"></span>
+            </div>
+            <div class="map-header-center">
+                <h2 id="mapTitle">🗺️ Mapa de la Mazmorra</h2>
+                <p id="mapSubtitle">Elige tu próximo desafío</p>
+            </div>
+            <div class="map-header-right">
+                <button class="map-action-btn" onclick="openInventoryModal()"><i class="fa-solid fa-briefcase"></i> Inventario</button>
+                <button class="map-action-btn" onclick="openForgeScreen()"><i class="fa-solid fa-hammer"></i> Forja</button>
+                <button id="mapConfigBtn" onclick="toggleConfig()">⚙️</button>
+            </div>
+        </div>
+        <div id="mapContent">
+            <div id="mapNodes"></div>
+        </div>
+        <div id="mapFooter">
+            <p id="mapHint">🔓 Los nodos con ✔ ya fueron derrotados — podés reentrar para buscar mejores items.</p>
+        </div>
+    </div>
+    <!-- Pantalla de fin de juego -->
+    <div id="end-screen" class="hidden">
+        <h2 id="endMessage"></h2>
+        <button id="restartButton" onclick="restartGame()">Reiniciar Juego</button>
+    </div>
+
+    <!-- MODALES GLOBALES (Accesibles desde cualquier pantalla) -->
+
+    <!-- Modal: Info del Jugador -->
+    <div id="playerInfoModal" class="modal hidden">
+        <div class="modal-content">
             <button class="modal-close" onclick="toggleModal('playerInfoModal')">✕</button>
             <h3>Información del Jugador</h3>
             <div id="modalPlayerStats"></div>
@@ -255,63 +329,119 @@
             <p>Habilidad: <strong>Meditación</strong> — Recupera 15 puntos de vida y aumenta la probabilidad de bloqueo un 5%.</p>
             <h4><i class="fa-solid fa-binoculars"></i> Explorador</h4>
             <p>Habilidad: <strong>Ingenio</strong> — Repara el escudo completamente. 50% de chance de mejorar el arma al siguiente nivel.</p>
-            </div>
-            </div>
-
-            <!-- Modal: Info de Monstruos -->
-            <div id="monsterInfoModal" class="modal hidden">
-            <div class="modal-content">
-            <button class="modal-close" onclick="toggleModal('monsterInfoModal')">✕</button>
-            <h3>Tipos de Monstruos</h3>
-            <h4>👾 Monstruo Común</h4>
-            <p>Sin habilidades especiales. Ataca directamente cada turno.</p>
-            <h4>🧙 Monstruo Mago</h4>
-            <p><strong>Regeneración</strong> — 30% de chance de recuperar 7 puntos de vida después de recibir daño.</p>
-            <h4>⚔️ Monstruo Guerrero</h4>
-            <p><strong>Contraataque</strong> — 20% de chance de bloquear tu ataque y devolverte daño en el mismo turno.</p>
-            <h4>🗺️ Monstruo Explorador</h4>
-            <p><strong>Rompe Escudo</strong> — 15% de chance de destruir tu escudo de un golpe.</p>
-            <h4>💀 Jefe Final</h4>
-            <p>100 puntos de vida y ataque elevado. Aparece en el combate 10. posee todas las habilidades de todos los monstruos.</p>
-            </div>
-         </div>
-             <!-- Modal: Mazo de Cartas -->
-            <div id="cardDeckModal" class="modal hidden">
-                <div class="modal-content" id="cardDeckModalContent">
-                    <button class="modal-close" onclick="toggleModal('cardDeckModal')">✕</button>
-                    <h3>📖 Tu Mazo</h3>
-                    <div id="cardDeckPanels">
-                        <!-- Panel izquierdo: carrusel -->
-                        <div id="cardCarouselPanel">
-                            <div id="carouselTrack"></div>
-                            <div id="carouselControls">
-                                <button class="carousel-arrow" id="carouselPrev" onclick="carouselMove(-1)">&#8592;</button>
-                                <span id="carouselCounter">1 / 1</span>
-                                <button class="carousel-arrow" id="carouselNext" onclick="carouselMove(1)">&#8594;</button>
-                            </div>
-                        </div>
-                        <!-- Divisor -->
-                        <div id="cardPanelDivider"></div>
-                        <!-- Panel derecho: detalle -->
-                        <div id="cardDetailPanel">
-                            <p class="empty-state">← Seleccioná<br>una carta</p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-    </div>
-
-    <!-- Panel del mapa -->
-    <div id="dungeonMap" class="hidden">
-        <div id="mapContent">
-            <h3>🗺️ Camino a la Mazmorra</h3>
-            <div id="mapNodes"></div>
         </div>
     </div>
-    <!-- Pantalla de fin de juego -->
-    <div id="end-screen" class="hidden">
-        <h2 id="endMessage"></h2>
-        <button id="restartButton" onclick="restartGame()">Reiniciar Juego</button>
+
+    <!-- Modal: Info de Monstruos -->
+    <div id="monsterInfoModal" class="modal hidden">
+        <div class="modal-content">
+            <button class="modal-close" onclick="toggleModal('monsterInfoModal')">✕</button>
+            <h3>Tipos de Monstruos & Drops</h3>
+            <h4>👾 Monstruo Común</h4>
+            <p>Sin habilidades especiales. Dropea: <strong>Cuero Común</strong> y <strong>Piel/Cabello</strong>.</p>
+            <h4>🧙 Monstruo Mago</h4>
+            <p><strong>Regeneración</strong>. Dropea: <strong>Polvo Arcano</strong> y <strong>Esencia de Maná</strong>.</p>
+            <h4>⚔️ Monstruo Guerrero</h4>
+            <p><strong>Contraataque</strong>. Dropea: <strong>Fragmentos de Armadura</strong> y <strong>Huesos Pesados</strong>.</p>
+            <h4>🗺️ Monstruo Explorador</h4>
+            <p><strong>Rompe Escudo</strong>. Dropea: <strong>Veneno Concentrado</strong> e <strong>Hilos Resistentes</strong>.</p>
+            <h4>💀 Jefe Final</h4>
+            <p>100 HP. Posee todas las habilidades. Dropea: <strong>Núcleo de Titán</strong> y <strong>Manual Exótico</strong>.</p>
+        </div>
+    </div>
+
+    <!-- Modal: Mazo de Cartas -->
+    <div id="cardDeckModal" class="modal hidden">
+        <div class="modal-content" id="cardDeckModalContent">
+            <button class="modal-close" onclick="toggleModal('cardDeckModal')">✕</button>
+            <h3>📖 Tu Mazo</h3>
+            <div id="cardDeckPanels">
+                <!-- Panel izquierdo: carrusel -->
+                <div id="cardCarouselPanel">
+                    <div id="carouselTrack"></div>
+                    <div id="carouselControls">
+                        <button class="carousel-arrow" id="carouselPrev" onclick="carouselMove(-1)">&#8592;</button>
+                        <span id="carouselCounter">1 / 1</span>
+                        <button class="carousel-arrow" id="carouselNext" onclick="carouselMove(1)">&#8594;</button>
+                    </div>
+                </div>
+                <!-- Divisor -->
+                <div id="cardPanelDivider"></div>
+                <!-- Panel derecho: detalle -->
+                <div id="cardDetailPanel">
+                    <p class="empty-state">← Seleccioná<br>una carta</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: Inventario / Mochila -->
+    <div id="inventoryModal" class="modal hidden">
+        <div class="modal-content inventory-modal-content">
+            <button class="modal-close" onclick="toggleModal('inventoryModal')">✕</button>
+            <div class="inv-modal-header">
+                <h3><i class="fa-solid fa-briefcase"></i> Mochila de Inventario</h3>
+                <div class="inv-tabs">
+                    <button id="tabMaterialsBtn" class="inv-tab-btn active" onclick="switchInventoryTab('materials')">🧪 Materiales</button>
+                    <button id="tabManualsBtn" class="inv-tab-btn" onclick="switchInventoryTab('manuals')">📜 Manuales</button>
+                    <button id="tabPotionsBtn" class="inv-tab-btn" onclick="switchInventoryTab('potions')">⚗️ Consumibles</button>
+                </div>
+            </div>
+            <div id="inventoryTabMaterials" class="inv-tab-content">
+                <div id="materialsGrid" class="materials-grid"></div>
+            </div>
+            <div id="inventoryTabManuals" class="inv-tab-content hidden">
+                <div id="manualsGrid" class="manuals-grid"></div>
+            </div>
+            <div id="inventoryTabPotions" class="inv-tab-content hidden">
+                <div id="potionsGrid" class="potions-grid"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Pantalla de Forja (pantalla completa, solo desde el mapa) -->
+    <div id="forge-screen" class="hidden">
+        <!-- Canvas de partículas de chispas -->
+        <canvas id="forge-bg-canvas"></canvas>
+
+        <!-- Capa de niebla decorativa -->
+        <div class="forge-atmosphere"></div>
+
+        <!-- Header -->
+        <div id="forge-header">
+            <button class="forge-back-btn" onclick="closeForgeScreen()">
+                <i class="fa-solid fa-arrow-left"></i> Volver al Mapa
+            </button>
+            <div class="forge-title-block">
+                <span class="forge-icon-flame">🔥</span>
+                <h2 class="forge-title">TALLER DE FORJA</h2>
+                <span class="forge-icon-flame">🔥</span>
+            </div>
+            <p class="forge-subtitle">Combina materiales para forjar armas, brazaletes y pociones</p>
+        </div>
+
+        <!-- Cuerpo principal: dos columnas -->
+        <div id="forge-body">
+            <!-- Panel izquierdo: lista de recetas -->
+            <div class="crafting-left-panel forge-left">
+                <h4>Manuales Desbloqueados</h4>
+                <div id="recipesList" class="recipes-list"></div>
+            </div>
+
+            <!-- Divisor con llama -->
+            <div class="forge-divider">
+                <div class="forge-divider-line"></div>
+                <span class="forge-divider-gem">⚒️</span>
+                <div class="forge-divider-line"></div>
+            </div>
+
+            <!-- Panel derecho: detalle de receta -->
+            <div class="crafting-right-panel forge-right">
+                <div id="recipeDetailContainer">
+                    <p class="empty-state">← Selecciona un manual para ver los ingredientes de forja</p>
+                </div>
+            </div>
+        </div>
     </div>
 
     <script src="juego2.js"></script>
